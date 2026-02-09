@@ -56,7 +56,7 @@ export async function generateSummary(text) {
 }
 
 export async function generateFlashcards(text, count = 5) {
-    const prompt = SYSTEM_PROMPT_FLASHCARDS.replace('{count}', count);
+    const prompt = SYSTEM_PROMPT_FLASHCARDS(count);
     const messages = [
         { role: 'system', content: prompt },
         { role: 'user', content: text }
