@@ -4,13 +4,14 @@ const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
 const SYSTEM_PROMPT_FLASHCARDS = (count) => `You are a helpful study assistant. Your task is to generate exactly ${count} flashcards from the provided text.
-The output format MUST be strictly:
-P: [Question]
-R: [Answer]
-P: [Question]
-R: [Answer]
-...
-Do not include any other text, intro, or outro. Just the P/R pairs.`;
+Return the result ONLY as a raw JSON Array of objects.
+Each object must have "question" and "answer" keys.
+Do not wrap it in markdown code blocks. Do not add any text before or after.
+Example:
+[
+  {"question": "Q1", "answer": "A1"},
+  {"question": "Q2", "answer": "A2"}
+]`;
 
 const SYSTEM_PROMPT_CHAT = `You are a helpful study assistant. Answer the user's question based strictly on the provided context text. If the answer is not in the text, say you don't know based on the context. Be concise and clear.`;
 
@@ -72,7 +73,8 @@ export async function generateFlashcards(text, count = 5) {
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-        throw new Error('No se pudo encontrar un array JSON válido en la respuesta.');
+        console.error("Failed Response:", response);
+        throw new Error('Respuesta inválida (no JSON): ' + cleanResponse.substring(0, 50) + '...');
     } catch (e) {
         console.error('Error parsing flashcards:', response);
         throw e;
