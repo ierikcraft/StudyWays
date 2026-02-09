@@ -1,8 +1,19 @@
-import * as firebase from './firebase.js';
-
 const NOTEBOOKS_KEY = 'studyways_notebooks';
 const OLD_STORAGE_KEY = 'studyways_data';
 let currentUser = null;
+let firebaseModule = null;
+
+// Lazy load helper
+async function getFirebase() {
+    if (firebaseModule) return firebaseModule;
+    try {
+        firebaseModule = await import('./firebase.js');
+        return firebaseModule;
+    } catch (error) {
+        console.error("Failed to load Firebase module:", error);
+        return null;
+    }
+}
 
 export function setCurrentUser(user) {
     currentUser = user;
@@ -12,12 +23,10 @@ export function setCurrentUser(user) {
 function getLocalNotebooks() {
     const data = localStorage.getItem(NOTEBOOKS_KEY);
     const parsed = data ? JSON.parse(data) : [];
-    // Ensure all local notebooks have source='local'
     return parsed.map(nb => ({ ...nb, source: 'local' }));
 }
 
 function saveLocalNotebooks(notebooks) {
-    // Filter out cloud notebooks just in case
     const localOnly = notebooks.filter(n => n.source === 'local');
     localStorage.setItem(NOTEBOOKS_KEY, JSON.stringify(localOnly));
 }
@@ -46,20 +55,21 @@ function migrateOldData() {
 // --- CRUD Operations (ASYNC) ---
 
 export async function getAllNotebooks() {
-    // Check migration first
     migrateOldData();
 
     // 1. Get Local
     const localNotebooks = getLocalNotebooks();
 
-    // 2. Get Cloud (if user logged in)
+    // 2. Get Cloud (if user logged in & firebase available)
     let cloudNotebooks = [];
     if (currentUser && currentUser.id) {
-        try {
-            cloudNotebooks = await firebase.getUserNotebooks(currentUser.id);
-        } catch (e) {
-            console.error("Failed to load cloud notebooks:", e);
-            // Don't fail entire app, just show local
+        const fb = await getFirebase();
+        if (fb) {
+            try {
+                cloudNotebooks = await fb.getUserNotebooks(currentUser.id);
+            } catch (e) {
+                console.error("Failed to load cloud notebooks:", e);
+            }
         }
     }
 
@@ -74,6 +84,11 @@ export async function getNotebook(id) {
 }
 
 export async function createNotebook(title) {
+    const fb = await getFirebase();
+
+    // Default to cloud ONLY if user logged in AND firebase loaded
+    const canUseCloud = currentUser && currentUser.id && fb;
+
     const newNotebook = {
         id: Date.now().toString(),
         title: title || 'Nuevo Cuaderno',
@@ -81,16 +96,16 @@ export async function createNotebook(title) {
         history: [],
         createdAt: new Date().toISOString(),
         lastModified: new Date().toISOString(),
-        source: (currentUser && currentUser.id) ? 'cloud' : 'local'
+        source: canUseCloud ? 'cloud' : 'local'
     };
 
     if (newNotebook.source === 'cloud') {
         try {
-            await firebase.saveNotebookToCloud(currentUser.id, newNotebook);
+            await fb.saveNotebookToCloud(currentUser.id, newNotebook);
         } catch (err) {
             console.error("Cloud creation failed, falling back to local:", err);
             newNotebook.source = 'local';
-            newNotebook.title += ' (Local)'; // Mark as local fallback
+            newNotebook.title += ' (Local)';
             const local = getLocalNotebooks();
             local.unshift(newNotebook);
             saveLocalNotebooks(local);
@@ -109,7 +124,6 @@ export async function updateNotebook(id, updates) {
     let notebook = await getNotebook(id);
     if (!notebook) return null;
 
-    // Apply updates
     const updatedNotebook = {
         ...notebook,
         ...updates,
@@ -117,15 +131,14 @@ export async function updateNotebook(id, updates) {
     };
 
     if (updatedNotebook.source === 'cloud') {
-        if (!currentUser || !currentUser.id) throw new Error('User not logged in');
-        try {
-            await firebase.saveNotebookToCloud(currentUser.id, updatedNotebook);
-        } catch (err) {
-            console.error("Cloud update failed:", err);
-            // Optionally convert to local or just alert
-            alert("Error guardando en la nube. Revisa tu conexión.");
-            // Fallback: Try saving locally as a backup? 
-            // For now, let's not duplicate to avoid ID conflicts, just warn.
+        const fb = await getFirebase();
+        if (fb && currentUser && currentUser.id) {
+            try {
+                await fb.saveNotebookToCloud(currentUser.id, updatedNotebook);
+            } catch (err) {
+                console.error("Cloud update failed:", err);
+                // Alerting on every auto-save might be annoying, logging for now
+            }
         }
     } else {
         const local = getLocalNotebooks();
@@ -144,8 +157,10 @@ export async function deleteNotebook(id) {
     if (!notebook) return;
 
     if (notebook.source === 'cloud') {
-        if (!currentUser || !currentUser.id) return;
-        await firebase.deleteNotebookFromCloud(currentUser.id, id);
+        const fb = await getFirebase();
+        if (fb && currentUser && currentUser.id) {
+            await fb.deleteNotebookFromCloud(currentUser.id, id);
+        }
     } else {
         const local = getLocalNotebooks();
         const filtered = local.filter(n => n.id !== id);
@@ -161,7 +176,6 @@ export async function addHistoryToNotebook(notebookId, item) {
             date: new Date().toISOString(),
             ...item
         };
-        // Create new history array explicitly to ensure reactivity/save
         const newHistory = [historyItem, ...(notebook.history || [])];
         await updateNotebook(notebookId, { history: newHistory });
         return historyItem;
