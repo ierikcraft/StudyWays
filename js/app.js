@@ -7,6 +7,8 @@ import * as pdfUtils from './pdf_utils.js';
 let flashcardCount = 5;
 let chatHistory = [];
 let currentContext = '';
+let activeNotebookId = null;
+let saveTimeout;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check Auth
@@ -16,20 +18,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (user) {
-        showApp(user);
+        initApp(user);
     } else {
         showLanding();
     }
 
-    // Auth Actions
+    // Global Event Listeners
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Auth
     document.getElementById('btn-login').addEventListener('click', auth.login);
     document.getElementById('btn-logout').addEventListener('click', auth.logout);
+    ui.elements.dashBtnLogout.addEventListener('click', auth.logout);
 
-    // Main Actions
+    // Dashboard
+    ui.elements.btnCreateNotebook.addEventListener('click', handleNewNotebook);
+    ui.elements.btnBackDashboard.addEventListener('click', showDashboard);
+
+    // Workspace Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
     ui.elements.actionFlashcards.addEventListener('click', handleFlashcards);
     ui.elements.actionChat.addEventListener('click', initializeChat);
-    document.getElementById('input-text').addEventListener('input', updateCharCount);
+
+    // Auto-save input
+    ui.elements.inputArea.addEventListener('input', (e) => {
+        updateCharCount(e);
+        scheduleSave();
+    });
 
     // PDF Upload
     const btnUpload = document.getElementById('btn-upload-pdf');
@@ -43,69 +60,143 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const text = await pdfUtils.extractTextFromPDF(file);
                 ui.elements.inputArea.value = text;
-                // Trigger input event to update char count
                 ui.elements.inputArea.dispatchEvent(new Event('input'));
             } catch (error) {
                 alert('Error al leer el PDF: ' + error.message);
-                console.error(error);
             } finally {
                 ui.toggleLoading(false);
-                // Reset input
                 fileInput.value = '';
             }
         }
     });
 
     // Settings Modal
-    ui.elements.actionSettings.addEventListener('click', openSettings);
-    ui.elements.closeModal.addEventListener('click', closeSettings);
-    ui.elements.saveSettings.addEventListener('click', saveSettings);
+    ui.elements.actionSettings.addEventListener('click', () => ui.elements.modal.classList.remove('hidden'));
+    ui.elements.closeModal.addEventListener('click', () => ui.elements.modal.classList.add('hidden'));
+    ui.elements.saveSettings.addEventListener('click', () => {
+        flashcardCount = ui.elements.flashcardCountInput.value;
+        ui.elements.modal.classList.add('hidden');
+    });
     ui.elements.flashcardCountInput.addEventListener('input', (e) => {
         ui.elements.flashcardCountInfo.textContent = e.target.value;
     });
-
-    // Close modal on outside click
     window.addEventListener('click', (e) => {
-        if (e.target === ui.elements.modal) closeSettings();
+        if (e.target === ui.elements.modal) ui.elements.modal.classList.add('hidden');
     });
-});
+}
 
-function showApp(user) {
+function initApp(user) {
     document.getElementById('landing-page').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('user-name').textContent = user.name;
-    // Optional: Set avatar if available or initials
     document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
 
-    loadHistory();
+    // Dashboard User Info
+    ui.elements.dashUserName.textContent = user.name;
+
+    showDashboard();
 }
 
 function showLanding() {
     document.getElementById('landing-page').classList.remove('hidden');
+    ui.elements.dashboard.classList.add('hidden');
     document.getElementById('app-container').classList.add('hidden');
 }
 
+function showDashboard() {
+    activeNotebookId = null;
+    document.getElementById('app-container').classList.add('hidden');
+    ui.elements.dashboard.classList.remove('hidden');
+
+    const notebooks = storage.getAllNotebooks();
+    ui.renderDashboard(notebooks, selectNotebook, handleDeleteNotebook);
+}
+
+function showWorkspace() {
+    ui.elements.dashboard.classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+}
+
+// --- Notebook Logic ---
+
+function selectNotebook(id) {
+    activeNotebookId = id;
+    const notebook = storage.getNotebook(id);
+    if (!notebook) return showDashboard(); // Safety check
+
+    // Restore text
+    ui.elements.inputArea.value = notebook.sourceText || '';
+    updateCharCount({ target: ui.elements.inputArea });
+
+    // Render history
+    // Since we removed sidebar history list for specific notebook, we need to ensure renderHistoryItem works.
+    // Wait, the user wanted "squares for notebooks" (dashboard) and "history different inside each one".
+    // The sidebar IS the history for the active notebook now.
+    ui.updateHistoryList(
+        notebook.history,
+        (historyId) => {
+            storage.removeHistoryFromNotebook(activeNotebookId, historyId);
+            // Refresh history view
+            const updatedNb = storage.getNotebook(activeNotebookId);
+            ui.updateHistoryList(
+                updatedNb.history,
+                (hId) => {
+                    storage.removeHistoryFromNotebook(activeNotebookId, hId);
+                    selectNotebook(activeNotebookId);
+                },
+                (hItem) => {
+                    if (hItem.type === 'summary') {
+                        ui.renderSummary(hItem.content);
+                    } else if (hItem.type === 'flashcard') {
+                        ui.renderFlashcards(hItem.content);
+                    }
+                }
+            );
+        },
+        (historyItem) => {
+            if (historyItem.type === 'summary') {
+                ui.renderSummary(historyItem.content);
+            } else if (historyItem.type === 'flashcard') {
+                ui.renderFlashcards(historyItem.content);
+            }
+        }
+    );
+
+    // Clear output area initially when opening notebook? Or keep blank?
+    ui.elements.outputArea.innerHTML = '<div class="placeholder-state"><p>Selecciona un ítem del historial o genera nuevo contenido.</p></div>';
+
+    showWorkspace();
+}
+
+function handleNewNotebook() {
+    const title = ui.promptNewNotebook();
+    if (title) {
+        const newNb = storage.createNotebook(title);
+        selectNotebook(newNb.id);
+    }
+}
+
+function handleDeleteNotebook(id) {
+    storage.deleteNotebook(id);
+    showDashboard();
+}
+
+function scheduleSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        if (activeNotebookId) {
+            storage.updateNotebook(activeNotebookId, {
+                sourceText: ui.elements.inputArea.value
+            });
+        }
+    }, 1000);
+}
+
 function updateCharCount(e) {
-    const count = e.target.value.length;
+    const count = e.target.value ? e.target.value.length : 0;
     document.getElementById('char-count').textContent = `${count} caracteres`;
 }
 
-// --- Settings Logic ---
-function openSettings() {
-    ui.elements.modal.classList.remove('hidden');
-}
-
-function closeSettings() {
-    ui.elements.modal.classList.add('hidden');
-}
-
-function saveSettings() {
-    flashcardCount = ui.elements.flashcardCountInput.value;
-    closeSettings();
-    // Optional: show a toast or feedback
-}
-
-// --- Feature Logic ---
+// --- Features ---
 
 async function handleSummary() {
     const text = ui.elements.inputArea.value.trim();
@@ -116,12 +207,29 @@ async function handleSummary() {
         const summary = await api.generateSummary(text);
         ui.renderSummary(summary);
 
-        storage.saveSession({
-            type: 'summary',
-            content: summary,
-            originalText: text
-        });
-        loadHistory();
+        if (activeNotebookId) {
+            storage.addHistoryToNotebook(activeNotebookId, {
+                type: 'summary',
+                content: summary,
+                originalText: text
+            });
+
+            // Auto-Title Logic
+            const notebook = storage.getNotebook(activeNotebookId);
+            if (notebook && (notebook.title === 'Nuevo Cuaderno' || notebook.title === 'Mi primer cuaderno')) {
+                // Generate title in background
+                api.generateTitle(text).then(newTitle => {
+                    if (newTitle) {
+                        storage.updateNotebook(activeNotebookId, { title: newTitle });
+                        // We don't need to refresh UI immediately unless we update sidebar title,
+                        // but sidebar is history now. Title is only visible in Dashboard?
+                        // Or maybe we should show Notebook Title in Top Bar!
+                    }
+                });
+            }
+
+            selectNotebook(activeNotebookId); // Update history list
+        }
     } catch (error) {
         alert('Error al generar resumen: ' + error.message);
     } finally {
@@ -138,13 +246,15 @@ async function handleFlashcards() {
         const cards = await api.generateFlashcards(text, flashcardCount);
         ui.renderFlashcards(cards);
 
-        storage.saveSession({
-            type: 'flashcard',
-            content: cards,
-            originalText: text,
-            meta: { count: flashcardCount }
-        });
-        loadHistory();
+        if (activeNotebookId) {
+            storage.addHistoryToNotebook(activeNotebookId, {
+                type: 'flashcard',
+                content: cards,
+                originalText: text,
+                meta: { count: flashcardCount }
+            });
+            selectNotebook(activeNotebookId);
+        }
     } catch (error) {
         alert('Error al generar flashcards: ' + error.message);
     } finally {
@@ -157,51 +267,35 @@ function initializeChat() {
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
 
     currentContext = text;
-    chatHistory = []; // Reset history on new chat start
+    chatHistory = [];
     ui.renderChatInterface(handleChatMessage);
 }
 
 async function handleChatMessage(message) {
     if (!message) return;
-
     ui.appendChatMessage('user', message);
-
-    // Optimistic UI or loading bubble could act here
-
     try {
         const response = await api.chatWithContext(currentContext, message, chatHistory);
         ui.appendChatMessage('ai', response);
-
         chatHistory.push({ role: 'user', content: message });
         chatHistory.push({ role: 'assistant', content: response });
-
-        // Save chat session? Maybe only on exit or periodically. 
-        // For now, simpler to not save every message to history list to avoid clutter,
-        // or update an existing session object.
     } catch (error) {
         ui.appendChatMessage('ai', 'Error: No pude conectar con el servicio.');
         console.error(error);
     }
 }
 
-
-function loadHistory() {
-    const history = storage.loadSessions();
-    ui.updateHistoryList(
-        history,
-        (id) => {
-            storage.deleteSession(id);
-            loadHistory();
+loadHistory();
         },
-        (session) => {
-            ui.elements.inputArea.value = session.originalText;
-            if (session.type === 'summary') {
-                ui.renderSummary(session.content);
-            } else if (session.type === 'flashcard') {
-                ui.renderFlashcards(session.content);
-            } else if (session.type === 'chat') {
-                // Restore chat if we implemented saving it
-            }
-        }
+(session) => {
+    ui.elements.inputArea.value = session.originalText;
+    if (session.type === 'summary') {
+        ui.renderSummary(session.content);
+    } else if (session.type === 'flashcard') {
+        ui.renderFlashcards(session.content);
+    } else if (session.type === 'chat') {
+        // Restore chat if we implemented saving it
+    }
+}
     );
 }

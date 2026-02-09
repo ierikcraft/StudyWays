@@ -56,12 +56,38 @@ export async function generateSummary(text) {
 }
 
 export async function generateFlashcards(text, count = 5) {
+    const prompt = SYSTEM_PROMPT_FLASHCARDS.replace('{count}', count);
     const messages = [
-        { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS(count) },
+        { role: 'system', content: prompt },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callGroq(messages);
-    return parseFlashcards(rawOutput);
+
+    const response = await callGroq(messages);
+    try {
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error('No se pudo parsear la respuesta JSON de flashcards.');
+    } catch (e) {
+        console.error('Error parsing flashcards:', response);
+        throw e;
+    }
+}
+
+export async function generateTitle(text) {
+    const messages = [
+        { role: 'system', content: 'Eres un asistente experto en resumir. Tu tarea es generar un TITULO corto, conciso y descriptivo (máximo 5 palabras) para el siguiente texto. Devuelve SOLO el título, sin comillas ni texto adicional.' },
+        { role: 'user', content: text.substring(0, 1000) } // Send first 1000 chars context
+    ];
+
+    try {
+        const title = await callGroq(messages);
+        return title.trim();
+    } catch (error) {
+        console.error('Error generating title:', error);
+        return null;
+    }
 }
 
 export async function chatWithContext(context, question, history = []) {

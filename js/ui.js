@@ -16,8 +16,12 @@ export const elements = {
     flashcardCountInfo: document.getElementById('flashcard-count-value'),
 
     // Notebooks
-    notebookList: document.getElementById('notebook-list'),
-    btnNewNotebook: document.getElementById('btn-new-notebook')
+    dashboard: document.getElementById('notebook-dashboard'),
+    notebooksGrid: document.getElementById('notebooks-grid'),
+    btnCreateNotebook: document.getElementById('btn-create-notebook'),
+    btnBackDashboard: document.getElementById('btn-back-dashboard'),
+    dashUserName: document.getElementById('dash-user-name'),
+    dashBtnLogout: document.getElementById('dash-btn-logout')
 };
 
 export function toggleLoading(isLoading) {
@@ -28,6 +32,37 @@ export function toggleLoading(isLoading) {
         elements.loadingIndicator.classList.add('hidden');
         elements.outputArea.classList.remove('hidden');
     }
+}
+
+export function renderDashboard(notebooks, onSelect, onDelete) {
+    // Keep the "Create New" card
+    const createBtn = elements.btnCreateNotebook;
+    elements.notebooksGrid.innerHTML = '';
+    elements.notebooksGrid.appendChild(createBtn);
+
+    notebooks.forEach(notebook => {
+        const card = document.createElement('div');
+        card.className = 'notebook-card fade-in';
+        const date = new Date(notebook.lastModified).toLocaleDateString();
+
+        card.innerHTML = `
+            <h3>${notebook.title}</h3>
+            <div class="notebook-meta">Actualizado: ${date}</div>
+            <div class="card-actions">
+                <button class="btn-card-action delete-btn" title="Borrar">×</button>
+            </div>
+        `;
+
+        card.addEventListener('click', () => onSelect(notebook.id));
+        card.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`¿Borrar cuaderno "${notebook.title}"?`)) {
+                onDelete(notebook.id);
+            }
+        });
+
+        elements.notebooksGrid.appendChild(card);
+    });
 }
 
 export function renderSummary(summary) {
@@ -145,28 +180,6 @@ export function updateHistoryList(sessions, onDelete, onLoad) {
             onDelete(session.id);
         });
         elements.historyList.appendChild(el);
-    });
-}
-
-export function renderNotebookList(notebooks, activeId, onSelect, onDelete) {
-    elements.notebookList.innerHTML = '';
-    notebooks.forEach(notebook => {
-        const item = document.createElement('div');
-        item.className = `sidebar-item ${notebook.id === activeId ? 'active' : ''}`;
-        item.innerHTML = `
-            <span class="item-title">📔 ${notebook.title}</span>
-            <button class="delete-btn">×</button>
-        `;
-
-        item.addEventListener('click', () => onSelect(notebook.id));
-        item.querySelector('.delete-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm(`¿Borrar cuaderno "${notebook.title}"?`)) {
-                onDelete(notebook.id);
-            }
-        });
-
-        elements.notebookList.appendChild(item);
     });
 }
 
