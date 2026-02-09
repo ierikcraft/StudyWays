@@ -39,7 +39,21 @@
             <div class="logo">
                 <h2>📚 StudyWays</h2>
             </div>
-            <div class="history-container">
+
+            <!-- Notebooks Section -->
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h3>Mis Cuadernos</h3>
+                    <button id="btn-new-notebook" class="btn-icon-small" title="Nuevo Cuaderno">➕</button>
+                </div>
+                <div id="notebook-list" class="sidebar-list">
+                    <!-- Notebooks will be injected here -->
+                </div>
+            </div>
+
+            <!-- History Section (Active Notebook) -->
+            <div class="sidebar-section history-container"
+                style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
                 <h3>Historial</h3>
                 <div id="history-list" class="history-list">
                     <!-- History items will be injected here -->

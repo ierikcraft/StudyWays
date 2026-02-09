@@ -203,6 +203,81 @@ textarea {
     color: #ef4444;
 }
 
+/* Sidebar Sections */
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    flex: 1;
+    min-height: 0;
+    /* recursive flex fix */
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.section-header h3 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-icon-small {
+    font-size: 0.9rem;
+    padding: 0.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-main);
+}
+
+.btn-icon-small:hover {
+    background-color: #e2e8f0;
+}
+
+.sidebar-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sidebar-item {
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    border: 1px solid transparent;
+}
+
+.sidebar-item:hover {
+    background-color: #f1f5f9;
+}
+
+.sidebar-item.active {
+    background-color: white;
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+    font-weight: 500;
+}
+
+.sidebar-item .delete-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.sidebar-item:hover .delete-btn {
+    opacity: 1;
+}
+
 /* Top Bar */
 .top-bar {
     height: 64px;

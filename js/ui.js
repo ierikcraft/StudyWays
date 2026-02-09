@@ -13,7 +13,11 @@ export const elements = {
     closeModal: document.getElementById('close-modal'),
     saveSettings: document.getElementById('save-settings'),
     flashcardCountInput: document.getElementById('flashcard-count'),
-    flashcardCountInfo: document.getElementById('flashcard-count-value')
+    flashcardCountInfo: document.getElementById('flashcard-count-value'),
+
+    // Notebooks
+    notebookList: document.getElementById('notebook-list'),
+    btnNewNotebook: document.getElementById('btn-new-notebook')
 };
 
 export function toggleLoading(isLoading) {
@@ -129,6 +133,11 @@ export function renderHistoryItem(session, onClick) {
 
 export function updateHistoryList(sessions, onDelete, onLoad) {
     elements.historyList.innerHTML = '';
+    if (!sessions || sessions.length === 0) {
+        elements.historyList.innerHTML = '<div style="padding:0.5rem; color:var(--text-muted); font-size:0.9rem;">Vacío</div>';
+        return;
+    }
+
     sessions.forEach(session => {
         const el = renderHistoryItem(session, onLoad);
         el.querySelector('.delete-btn').addEventListener('click', (e) => {
@@ -137,4 +146,30 @@ export function updateHistoryList(sessions, onDelete, onLoad) {
         });
         elements.historyList.appendChild(el);
     });
+}
+
+export function renderNotebookList(notebooks, activeId, onSelect, onDelete) {
+    elements.notebookList.innerHTML = '';
+    notebooks.forEach(notebook => {
+        const item = document.createElement('div');
+        item.className = `sidebar-item ${notebook.id === activeId ? 'active' : ''}`;
+        item.innerHTML = `
+            <span class="item-title">📔 ${notebook.title}</span>
+            <button class="delete-btn">×</button>
+        `;
+
+        item.addEventListener('click', () => onSelect(notebook.id));
+        item.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`¿Borrar cuaderno "${notebook.title}"?`)) {
+                onDelete(notebook.id);
+            }
+        });
+
+        elements.notebookList.appendChild(item);
+    });
+}
+
+export function promptNewNotebook() {
+    return prompt('Nombre del nuevo cuaderno:', 'Nuevo Cuaderno');
 }
