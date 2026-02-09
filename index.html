@@ -13,7 +13,23 @@
 </head>
 
 <body>
-    <div class="app-container">
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-container">
+        <div class="landing-content fade-in-up">
+            <h1 class="landing-title">StudyWays</h1>
+            <p class="landing-subtitle">Tu compañero de estudio inteligente.</p>
+            <div class="landing-features">
+                <div class="feature-item">✨ Resúmenes Instantáneos</div>
+                <div class="feature-item">🗂️ Flashcards Automáticas</div>
+                <div class="feature-item">💬 Asistente Q&A</div>
+            </div>
+            <button id="btn-login" class="btn-login">
+                Entrar con ErikAccount
+            </button>
+        </div>
+    </div>
+
+    <div id="app-container" class="app-container hidden">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
@@ -32,8 +48,9 @@
             <header class="top-bar">
                 <h1>Panel de Estudio</h1>
                 <div class="user-profile">
-                    <span>Usuario</span>
-                    <div class="avatar">👤</div>
+                    <span id="user-name">Usuario</span>
+                    <div class="avatar" id="user-avatar">👤</div>
+                    <button id="btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
                 </div>
             </header>
 

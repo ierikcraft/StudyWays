@@ -1,13 +1,28 @@
 import * as api from './api.js';
 import * as storage from './storage.js';
 import * as ui from './ui.js';
+import * as auth from './auth.js';
 
 let flashcardCount = 5;
 let chatHistory = [];
 let currentContext = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadHistory();
+    // Check Auth
+    let user = auth.getUser();
+    if (!user) {
+        user = auth.handleAuthCallback();
+    }
+
+    if (user) {
+        showApp(user);
+    } else {
+        showLanding();
+    }
+
+    // Auth Actions
+    document.getElementById('btn-login').addEventListener('click', auth.login);
+    document.getElementById('btn-logout').addEventListener('click', auth.logout);
 
     // Main Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
@@ -28,6 +43,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === ui.elements.modal) closeSettings();
     });
 });
+
+function showApp(user) {
+    document.getElementById('landing-page').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('user-name').textContent = user.name;
+    // Optional: Set avatar if available or initials
+    document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
+
+    loadHistory();
+}
+
+function showLanding() {
+    document.getElementById('landing-page').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+}
 
 function updateCharCount(e) {
     const count = e.target.value.length;
