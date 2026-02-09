@@ -64,11 +64,15 @@ export async function generateFlashcards(text, count = 5) {
 
     const response = await callGroq(messages);
     try {
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        // Strip markdown code blocks if present
+        let cleanResponse = response.replace(/```json\n?|```/g, '').trim();
+
+        // Find the JSON array
+        const jsonMatch = cleanResponse.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-        throw new Error('No se pudo parsear la respuesta JSON de flashcards.');
+        throw new Error('No se pudo encontrar un array JSON válido en la respuesta.');
     } catch (e) {
         console.error('Error parsing flashcards:', response);
         throw e;
