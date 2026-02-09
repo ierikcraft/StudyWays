@@ -47,10 +47,18 @@
                     <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
                     <div class="action-buttons">
                         <button id="btn-summary" class="btn primary">
-                            ✨ Generar Resumen
+                            ✨ Resumen
                         </button>
-                        <button id="btn-flashcards" class="btn secondary">
-                            🗂️ Crear Flashcards
+                        <div class="btn-group">
+                            <button id="btn-flashcards" class="btn secondary">
+                                🗂️ Flashcards
+                            </button>
+                            <button id="btn-flashcards-settings" class="btn icon-only" title="Configurar cantidad">
+                                ✏️
+                            </button>
+                        </div>
+                        <button id="btn-chat" class="btn secondary">
+                            💬 Chat
                         </button>
                     </div>
                 </section>
@@ -74,6 +82,24 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content fade-in">
+            <div class="modal-header">
+                <h3>Configuración de Flashcards</h3>
+                <button id="close-modal" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <label for="flashcard-count">Cantidad de tarjetas:</label>
+                <div class="range-control">
+                    <input type="range" id="flashcard-count" min="3" max="20" value="5">
+                    <span id="flashcard-count-value">5</span>
+                </div>
+                <button id="save-settings" class="btn primary full-width">Guardar</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/app.js"></script>

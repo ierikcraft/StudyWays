@@ -3,9 +3,17 @@ export const elements = {
     outputArea: document.getElementById('output-content'),
     actionSummary: document.getElementById('btn-summary'),
     actionFlashcards: document.getElementById('btn-flashcards'),
+    actionChat: document.getElementById('btn-chat'),
+    actionSettings: document.getElementById('btn-flashcards-settings'),
     historyList: document.getElementById('history-list'),
     loadingIndicator: document.getElementById('loading'),
-    contentTitle: document.getElementById('content-title')
+    contentTitle: document.getElementById('content-title'),
+    // Modal
+    modal: document.getElementById('settings-modal'),
+    closeModal: document.getElementById('close-modal'),
+    saveSettings: document.getElementById('save-settings'),
+    flashcardCountInput: document.getElementById('flashcard-count'),
+    flashcardCountInfo: document.getElementById('flashcard-count-value')
 };
 
 export function toggleLoading(isLoading) {
@@ -24,7 +32,7 @@ export function renderSummary(summary) {
             <div class="markdown-body">${marked.parse(summary)}</div>
         </div>
     `;
-    elements.contentTitle.textContent = 'Resumen';
+    elements.contentTitle.textContent = 'Results: Resumen';
 }
 
 export function renderFlashcards(cards) {
@@ -52,14 +60,59 @@ export function renderFlashcards(cards) {
     });
 
     elements.outputArea.appendChild(container);
-    elements.contentTitle.textContent = 'Flashcards';
+    elements.contentTitle.textContent = 'Results: Flashcards';
+}
+
+export function renderChatInterface(onSend) {
+    elements.outputArea.innerHTML = `
+        <div class="chat-container fade-in">
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-bubble ai">Hola, soy tu asistente de estudio. Hazme cualquier pregunta sobre el texto.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe tu pregunta..." style="flex:1; border:1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.5rem;">
+                <button id="send-chat" class="btn primary" style="width: auto;">Enviar</button>
+            </div>
+        </div>
+    `;
+    elements.contentTitle.textContent = 'Chat Q&A';
+
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-chat');
+
+    const handleSend = () => {
+        const text = input.value.trim();
+        if (text) {
+            onSend(text);
+            input.value = '';
+        }
+    };
+
+    sendBtn.addEventListener('click', handleSend);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSend();
+    });
+}
+
+export function appendChatMessage(role, text) {
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${role} fade-in`;
+    bubble.textContent = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
 }
 
 export function renderHistoryItem(session, onClick) {
     const item = document.createElement('div');
     item.className = 'history-item';
     const date = new Date(session.date).toLocaleDateString();
-    const typeLabel = session.type === 'summary' ? '📝 Resumen' : '🗂️ Flashcards';
+    let typeLabel = '📄 Archivo';
+    if (session.type === 'summary') typeLabel = '📝 Resumen';
+    if (session.type === 'flashcard') typeLabel = '🗂️ Flashcards';
+    if (session.type === 'chat') typeLabel = '💬 Chat';
 
     item.innerHTML = `
         <div class="history-info">

@@ -3,7 +3,7 @@ const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
-const SYSTEM_PROMPT_FLASHCARDS = `You are a helpful study assistant. Your task is to generate flashcards from the provided text.
+const SYSTEM_PROMPT_FLASHCARDS = (count) => `You are a helpful study assistant. Your task is to generate exactly ${count} flashcards from the provided text.
 The output format MUST be strictly:
 P: [Question]
 R: [Answer]
@@ -11,6 +11,8 @@ P: [Question]
 R: [Answer]
 ...
 Do not include any other text, intro, or outro. Just the P/R pairs.`;
+
+const SYSTEM_PROMPT_CHAT = `You are a helpful study assistant. Answer the user's question based strictly on the provided context text. If the answer is not in the text, say you don't know based on the context. Be concise and clear.`;
 
 /**
  * Calls the Groq API.
@@ -53,13 +55,23 @@ export async function generateSummary(text) {
     return await callGroq(messages);
 }
 
-export async function generateFlashcards(text) {
+export async function generateFlashcards(text, count = 5) {
     const messages = [
-        { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS },
+        { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS(count) },
         { role: 'user', content: text }
     ];
     const rawOutput = await callGroq(messages);
     return parseFlashcards(rawOutput);
+}
+
+export async function chatWithContext(context, question, history = []) {
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT_CHAT },
+        { role: 'user', content: `Context:\n${context}` },
+        ...history,
+        { role: 'user', content: question }
+    ];
+    return await callGroq(messages);
 }
 
 function parseFlashcards(text) {
