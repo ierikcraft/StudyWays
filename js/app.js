@@ -1,4 +1,3 @@
-```javascript
 import * as api from './api.js';
 import * as storage from './storage.js';
 import * as ui from './ui.js';
@@ -32,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function updateCharCount(e) {
     const count = e.target.value.length;
-    document.getElementById('char-count').textContent = `${ count } caracteres`;
+    document.getElementById('char-count').textContent = `${count} caracteres`;
 }
 
 // --- Settings Logic ---
@@ -60,7 +59,7 @@ async function handleSummary() {
     try {
         const summary = await api.generateSummary(text);
         ui.renderSummary(summary);
-        
+
         storage.saveSession({
             type: 'summary',
             content: summary,
@@ -82,7 +81,7 @@ async function handleFlashcards() {
     try {
         const cards = await api.generateFlashcards(text, flashcardCount);
         ui.renderFlashcards(cards);
-        
+
         storage.saveSession({
             type: 'flashcard',
             content: cards,
@@ -100,7 +99,7 @@ async function handleFlashcards() {
 function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
-    
+
     currentContext = text;
     chatHistory = []; // Reset history on new chat start
     ui.renderChatInterface(handleChatMessage);
@@ -108,15 +107,15 @@ function initializeChat() {
 
 async function handleChatMessage(message) {
     if (!message) return;
-    
+
     ui.appendChatMessage('user', message);
-    
+
     // Optimistic UI or loading bubble could act here
-    
+
     try {
         const response = await api.chatWithContext(currentContext, message, chatHistory);
         ui.appendChatMessage('ai', response);
-        
+
         chatHistory.push({ role: 'user', content: message });
         chatHistory.push({ role: 'assistant', content: response });
 
@@ -133,7 +132,7 @@ async function handleChatMessage(message) {
 function loadHistory() {
     const history = storage.loadSessions();
     ui.updateHistoryList(
-        history, 
+        history,
         (id) => {
             storage.deleteSession(id);
             loadHistory();
@@ -150,4 +149,3 @@ function loadHistory() {
         }
     );
 }
-```
