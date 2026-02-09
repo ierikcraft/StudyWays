@@ -45,7 +45,13 @@ export function renderDashboard(notebooks, onSelect, onDelete) {
         card.className = 'notebook-card fade-in';
         const date = new Date(notebook.lastModified).toLocaleDateString();
 
+        // Badge Logic
+        const isCloud = notebook.source === 'cloud';
+        const badgeClass = isCloud ? 'badge-cloud' : 'badge-local';
+        const badgeText = isCloud ? '☁️ Cloud' : '💻 Local';
+
         card.innerHTML = `
+            <div class="notebook-badge ${badgeClass}">${badgeText}</div>
             <h3>${notebook.title}</h3>
             <div class="notebook-meta">Actualizado: ${date}</div>
             <div class="card-actions">

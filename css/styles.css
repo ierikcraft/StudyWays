@@ -877,3 +877,27 @@ input[type="range"] {
     gap: 1rem;
     font-weight: 500;
 }
+
+/* Badges */
+.notebook-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-cloud {
+    background-color: #e0e7ff;
+    /* Indigo 100 */
+    color: var(--primary-color);
+}
+
+.badge-local {
+    background-color: #f1f5f9;
+    /* Slate 100 */
+    color: var(--text-muted);
+}
