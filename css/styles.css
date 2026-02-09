@@ -553,6 +553,7 @@ input[type="range"] {
     width: 100%;
     height: 100%;
     -webkit-backface-visibility: hidden;
+    /* Safari */
     backface-visibility: hidden;
     display: flex;
     align-items: center;
@@ -565,8 +566,19 @@ input[type="range"] {
     overflow-y: auto;
 }
 
+.flashcard-front {
+    color: var(--text-main);
+    z-index: 2;
+    transform: rotateY(0deg);
+}
 
-/* Landing Page */
+.flashcard-back {
+    background-color: var(--primary-color);
+    color: white;
+    transform: rotateY(180deg);
+    z-index: 1;
+}
+
 .landing-container {
     height: 100vh;
     width: 100%;
