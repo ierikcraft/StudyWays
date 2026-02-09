@@ -97,9 +97,9 @@ function initApp(user) {
 }
 
 function showLanding() {
-    document.getElementById('landing-page').classList.remove('hidden');
     ui.elements.dashboard.classList.add('hidden');
     document.getElementById('app-container').classList.add('hidden');
+    document.getElementById('landing-page').classList.remove('hidden');
 }
 
 function showDashboard() {
@@ -121,36 +121,22 @@ function showWorkspace() {
 function selectNotebook(id) {
     activeNotebookId = id;
     const notebook = storage.getNotebook(id);
-    if (!notebook) return showDashboard(); // Safety check
+    if (!notebook) return showDashboard();
 
     // Restore text
     ui.elements.inputArea.value = notebook.sourceText || '';
     updateCharCount({ target: ui.elements.inputArea });
 
     // Render history
-    // Since we removed sidebar history list for specific notebook, we need to ensure renderHistoryItem works.
-    // Wait, the user wanted "squares for notebooks" (dashboard) and "history different inside each one".
-    // The sidebar IS the history for the active notebook now.
     ui.updateHistoryList(
         notebook.history,
         (historyId) => {
             storage.removeHistoryFromNotebook(activeNotebookId, historyId);
             // Refresh history view
             const updatedNb = storage.getNotebook(activeNotebookId);
-            ui.updateHistoryList(
-                updatedNb.history,
-                (hId) => {
-                    storage.removeHistoryFromNotebook(activeNotebookId, hId);
-                    selectNotebook(activeNotebookId);
-                },
-                (hItem) => {
-                    if (hItem.type === 'summary') {
-                        ui.renderSummary(hItem.content);
-                    } else if (hItem.type === 'flashcard') {
-                        ui.renderFlashcards(hItem.content);
-                    }
-                }
-            );
+            // We need to pass the same callbacks recursively or extract them
+            // For simplicity, just re-select which re-renders everything
+            selectNotebook(activeNotebookId);
         },
         (historyItem) => {
             if (historyItem.type === 'summary') {
@@ -161,7 +147,7 @@ function selectNotebook(id) {
         }
     );
 
-    // Clear output area initially when opening notebook? Or keep blank?
+    // Clear output area initially when opening notebook
     ui.elements.outputArea.innerHTML = '<div class="placeholder-state"><p>Selecciona un ítem del historial o genera nuevo contenido.</p></div>';
 
     showWorkspace();
@@ -217,18 +203,17 @@ async function handleSummary() {
             // Auto-Title Logic
             const notebook = storage.getNotebook(activeNotebookId);
             if (notebook && (notebook.title === 'Nuevo Cuaderno' || notebook.title === 'Mi primer cuaderno')) {
-                // Generate title in background
                 api.generateTitle(text).then(newTitle => {
                     if (newTitle) {
                         storage.updateNotebook(activeNotebookId, { title: newTitle });
-                        // We don't need to refresh UI immediately unless we update sidebar title,
-                        // but sidebar is history now. Title is only visible in Dashboard?
-                        // Or maybe we should show Notebook Title in Top Bar!
                     }
                 });
             }
 
             selectNotebook(activeNotebookId); // Update history list
+        } else {
+            // Fallback if no notebook checks (shouldn't happen in workspace view)
+            alert('Nota: No hay cuaderno activo.');
         }
     } catch (error) {
         alert('Error al generar resumen: ' + error.message);
@@ -283,19 +268,4 @@ async function handleChatMessage(message) {
         ui.appendChatMessage('ai', 'Error: No pude conectar con el servicio.');
         console.error(error);
     }
-}
-
-loadHistory();
-        },
-(session) => {
-    ui.elements.inputArea.value = session.originalText;
-    if (session.type === 'summary') {
-        ui.renderSummary(session.content);
-    } else if (session.type === 'flashcard') {
-        ui.renderFlashcards(session.content);
-    } else if (session.type === 'chat') {
-        // Restore chat if we implemented saving it
-    }
-}
-    );
 }
