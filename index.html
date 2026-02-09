@@ -10,6 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 
 <body>
@@ -59,7 +63,14 @@
                 <section class="input-section card">
                     <div class="input-header">
                         <h3>Texto de Entrada</h3>
-                        <span id="char-count" class="text-muted">0 caracteres</span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="file" id="pdf-upload" accept=".pdf" class="hidden">
+                            <button id="btn-upload-pdf" class="btn secondary"
+                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDF">
+                                📄 Subir PDF
+                            </button>
+                            <span id="char-count" class="text-muted">0 caracteres</span>
+                        </div>
                     </div>
                     <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
                     <div class="action-buttons">

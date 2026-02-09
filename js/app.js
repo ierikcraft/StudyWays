@@ -2,6 +2,7 @@ import * as api from './api.js';
 import * as storage from './storage.js';
 import * as ui from './ui.js';
 import * as auth from './auth.js';
+import * as pdfUtils from './pdf_utils.js';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -29,6 +30,31 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.elements.actionFlashcards.addEventListener('click', handleFlashcards);
     ui.elements.actionChat.addEventListener('click', initializeChat);
     document.getElementById('input-text').addEventListener('input', updateCharCount);
+
+    // PDF Upload
+    const btnUpload = document.getElementById('btn-upload-pdf');
+    const fileInput = document.getElementById('pdf-upload');
+
+    btnUpload.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            ui.toggleLoading(true);
+            try {
+                const text = await pdfUtils.extractTextFromPDF(file);
+                ui.elements.inputArea.value = text;
+                // Trigger input event to update char count
+                ui.elements.inputArea.dispatchEvent(new Event('input'));
+            } catch (error) {
+                alert('Error al leer el PDF: ' + error.message);
+                console.error(error);
+            } finally {
+                ui.toggleLoading(false);
+                // Reset input
+                fileInput.value = '';
+            }
+        }
+    });
 
     // Settings Modal
     ui.elements.actionSettings.addEventListener('click', openSettings);
