@@ -55,7 +55,12 @@ export async function getAllNotebooks() {
     // 2. Get Cloud (if user logged in)
     let cloudNotebooks = [];
     if (currentUser && currentUser.id) {
-        cloudNotebooks = await firebase.getUserNotebooks(currentUser.id);
+        try {
+            cloudNotebooks = await firebase.getUserNotebooks(currentUser.id);
+        } catch (e) {
+            console.error("Failed to load cloud notebooks:", e);
+            // Don't fail entire app, just show local
+        }
     }
 
     // 3. Merge and Sort
@@ -80,7 +85,17 @@ export async function createNotebook(title) {
     };
 
     if (newNotebook.source === 'cloud') {
-        await firebase.saveNotebookToCloud(currentUser.id, newNotebook);
+        try {
+            await firebase.saveNotebookToCloud(currentUser.id, newNotebook);
+        } catch (err) {
+            console.error("Cloud creation failed, falling back to local:", err);
+            newNotebook.source = 'local';
+            newNotebook.title += ' (Local)'; // Mark as local fallback
+            const local = getLocalNotebooks();
+            local.unshift(newNotebook);
+            saveLocalNotebooks(local);
+            alert("No se pudo conectar a la nube. Se ha creado el cuaderno en modo Local.");
+        }
     } else {
         const local = getLocalNotebooks();
         local.unshift(newNotebook);
@@ -91,9 +106,10 @@ export async function createNotebook(title) {
 }
 
 export async function updateNotebook(id, updates) {
-    const notebook = await getNotebook(id);
+    let notebook = await getNotebook(id);
     if (!notebook) return null;
 
+    // Apply updates
     const updatedNotebook = {
         ...notebook,
         ...updates,
@@ -102,7 +118,15 @@ export async function updateNotebook(id, updates) {
 
     if (updatedNotebook.source === 'cloud') {
         if (!currentUser || !currentUser.id) throw new Error('User not logged in');
-        await firebase.saveNotebookToCloud(currentUser.id, updatedNotebook);
+        try {
+            await firebase.saveNotebookToCloud(currentUser.id, updatedNotebook);
+        } catch (err) {
+            console.error("Cloud update failed:", err);
+            // Optionally convert to local or just alert
+            alert("Error guardando en la nube. Revisa tu conexión.");
+            // Fallback: Try saving locally as a backup? 
+            // For now, let's not duplicate to avoid ID conflicts, just warn.
+        }
     } else {
         const local = getLocalNotebooks();
         const index = local.findIndex(n => n.id === id);
