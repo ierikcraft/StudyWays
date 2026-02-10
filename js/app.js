@@ -7,8 +7,6 @@ import * as pdfUtils from './pdf_utils.js';
 let flashcardCount = 5;
 let chatHistory = [];
 let currentContext = '';
-let activeNotebookId = null;
-let saveTimeout;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check Auth
@@ -18,35 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (user) {
-        initApp(user);
+        showApp(user);
     } else {
         showLanding();
     }
 
-    // Global Event Listeners
-    setupEventListeners();
-});
-
-function setupEventListeners() {
-    // Auth
+    // Auth Actions
     document.getElementById('btn-login').addEventListener('click', auth.login);
     document.getElementById('btn-logout').addEventListener('click', auth.logout);
-    ui.elements.dashBtnLogout.addEventListener('click', auth.logout);
 
-    // Dashboard
-    ui.elements.btnCreateNotebook.addEventListener('click', handleNewNotebook);
-    ui.elements.btnBackDashboard.addEventListener('click', showDashboard);
-
-    // Workspace Actions
+    // Main Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
     ui.elements.actionFlashcards.addEventListener('click', handleFlashcards);
     ui.elements.actionChat.addEventListener('click', initializeChat);
-
-    // Auto-save input
-    ui.elements.inputArea.addEventListener('input', (e) => {
-        updateCharCount(e);
-        scheduleSave();
-    });
+    document.getElementById('input-text').addEventListener('input', updateCharCount);
 
     // PDF Upload
     const btnUpload = document.getElementById('btn-upload-pdf');
@@ -60,129 +43,69 @@ function setupEventListeners() {
             try {
                 const text = await pdfUtils.extractTextFromPDF(file);
                 ui.elements.inputArea.value = text;
+                // Trigger input event to update char count
                 ui.elements.inputArea.dispatchEvent(new Event('input'));
             } catch (error) {
                 alert('Error al leer el PDF: ' + error.message);
+                console.error(error);
             } finally {
                 ui.toggleLoading(false);
+                // Reset input
                 fileInput.value = '';
             }
         }
     });
 
     // Settings Modal
-    ui.elements.actionSettings.addEventListener('click', () => ui.elements.modal.classList.remove('hidden'));
-    ui.elements.closeModal.addEventListener('click', () => ui.elements.modal.classList.add('hidden'));
-    ui.elements.saveSettings.addEventListener('click', () => {
-        flashcardCount = ui.elements.flashcardCountInput.value;
-        ui.elements.modal.classList.add('hidden');
-    });
+    ui.elements.actionSettings.addEventListener('click', openSettings);
+    ui.elements.closeModal.addEventListener('click', closeSettings);
+    ui.elements.saveSettings.addEventListener('click', saveSettings);
     ui.elements.flashcardCountInput.addEventListener('input', (e) => {
         ui.elements.flashcardCountInfo.textContent = e.target.value;
     });
-    window.addEventListener('click', (e) => {
-        if (e.target === ui.elements.modal) ui.elements.modal.classList.add('hidden');
-    });
-}
 
-function initApp(user) {
+    // Close modal on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === ui.elements.modal) closeSettings();
+    });
+});
+
+function showApp(user) {
     document.getElementById('landing-page').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('user-name').textContent = user.name;
+    // Optional: Set avatar if available or initials
     document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
 
-    // Dashboard User Info
-    ui.elements.dashUserName.textContent = user.name;
-
-    showDashboard();
+    loadHistory();
 }
 
 function showLanding() {
-    ui.elements.dashboard.classList.add('hidden');
-    document.getElementById('app-container').classList.add('hidden');
     document.getElementById('landing-page').classList.remove('hidden');
-}
-
-function showDashboard() {
-    activeNotebookId = null;
     document.getElementById('app-container').classList.add('hidden');
-    ui.elements.dashboard.classList.remove('hidden');
-
-    const notebooks = storage.getAllNotebooks();
-    ui.renderDashboard(notebooks, selectNotebook, handleDeleteNotebook);
-}
-
-function showWorkspace() {
-    ui.elements.dashboard.classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-}
-
-// --- Notebook Logic ---
-
-function selectNotebook(id) {
-    activeNotebookId = id;
-    const notebook = storage.getNotebook(id);
-    if (!notebook) return showDashboard();
-
-    // Restore text
-    ui.elements.inputArea.value = notebook.sourceText || '';
-    updateCharCount({ target: ui.elements.inputArea });
-
-    // Render history
-    ui.updateHistoryList(
-        notebook.history,
-        (historyId) => {
-            storage.removeHistoryFromNotebook(activeNotebookId, historyId);
-            // Refresh history view
-            const updatedNb = storage.getNotebook(activeNotebookId);
-            // We need to pass the same callbacks recursively or extract them
-            // For simplicity, just re-select which re-renders everything
-            selectNotebook(activeNotebookId);
-        },
-        (historyItem) => {
-            if (historyItem.type === 'summary') {
-                ui.renderSummary(historyItem.content);
-            } else if (historyItem.type === 'flashcard') {
-                ui.renderFlashcards(historyItem.content);
-            }
-        }
-    );
-
-    // Clear output area initially when opening notebook
-    ui.elements.outputArea.innerHTML = '<div class="placeholder-state"><p>Selecciona un ítem del historial o genera nuevo contenido.</p></div>';
-
-    showWorkspace();
-}
-
-function handleNewNotebook() {
-    const title = ui.promptNewNotebook();
-    if (title) {
-        const newNb = storage.createNotebook(title);
-        selectNotebook(newNb.id);
-    }
-}
-
-function handleDeleteNotebook(id) {
-    storage.deleteNotebook(id);
-    showDashboard();
-}
-
-function scheduleSave() {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        if (activeNotebookId) {
-            storage.updateNotebook(activeNotebookId, {
-                sourceText: ui.elements.inputArea.value
-            });
-        }
-    }, 1000);
 }
 
 function updateCharCount(e) {
-    const count = e.target.value ? e.target.value.length : 0;
+    const count = e.target.value.length;
     document.getElementById('char-count').textContent = `${count} caracteres`;
 }
 
-// --- Features ---
+// --- Settings Logic ---
+function openSettings() {
+    ui.elements.modal.classList.remove('hidden');
+}
+
+function closeSettings() {
+    ui.elements.modal.classList.add('hidden');
+}
+
+function saveSettings() {
+    flashcardCount = ui.elements.flashcardCountInput.value;
+    closeSettings();
+    // Optional: show a toast or feedback
+}
+
+// --- Feature Logic ---
 
 async function handleSummary() {
     const text = ui.elements.inputArea.value.trim();
@@ -193,28 +116,12 @@ async function handleSummary() {
         const summary = await api.generateSummary(text);
         ui.renderSummary(summary);
 
-        if (activeNotebookId) {
-            storage.addHistoryToNotebook(activeNotebookId, {
-                type: 'summary',
-                content: summary,
-                originalText: text
-            });
-
-            // Auto-Title Logic
-            const notebook = storage.getNotebook(activeNotebookId);
-            if (notebook && (notebook.title === 'Nuevo Cuaderno' || notebook.title === 'Mi primer cuaderno')) {
-                api.generateTitle(text).then(newTitle => {
-                    if (newTitle) {
-                        storage.updateNotebook(activeNotebookId, { title: newTitle });
-                    }
-                });
-            }
-
-            selectNotebook(activeNotebookId); // Update history list
-        } else {
-            // Fallback if no notebook checks (shouldn't happen in workspace view)
-            alert('Nota: No hay cuaderno activo.');
-        }
+        storage.saveSession({
+            type: 'summary',
+            content: summary,
+            originalText: text
+        });
+        loadHistory();
     } catch (error) {
         alert('Error al generar resumen: ' + error.message);
     } finally {
@@ -231,15 +138,13 @@ async function handleFlashcards() {
         const cards = await api.generateFlashcards(text, flashcardCount);
         ui.renderFlashcards(cards);
 
-        if (activeNotebookId) {
-            storage.addHistoryToNotebook(activeNotebookId, {
-                type: 'flashcard',
-                content: cards,
-                originalText: text,
-                meta: { count: flashcardCount }
-            });
-            selectNotebook(activeNotebookId);
-        }
+        storage.saveSession({
+            type: 'flashcard',
+            content: cards,
+            originalText: text,
+            meta: { count: flashcardCount }
+        });
+        loadHistory();
     } catch (error) {
         alert('Error al generar flashcards: ' + error.message);
     } finally {
@@ -252,20 +157,51 @@ function initializeChat() {
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
 
     currentContext = text;
-    chatHistory = [];
+    chatHistory = []; // Reset history on new chat start
     ui.renderChatInterface(handleChatMessage);
 }
 
 async function handleChatMessage(message) {
     if (!message) return;
+
     ui.appendChatMessage('user', message);
+
+    // Optimistic UI or loading bubble could act here
+
     try {
         const response = await api.chatWithContext(currentContext, message, chatHistory);
         ui.appendChatMessage('ai', response);
+
         chatHistory.push({ role: 'user', content: message });
         chatHistory.push({ role: 'assistant', content: response });
+
+        // Save chat session? Maybe only on exit or periodically. 
+        // For now, simpler to not save every message to history list to avoid clutter,
+        // or update an existing session object.
     } catch (error) {
         ui.appendChatMessage('ai', 'Error: No pude conectar con el servicio.');
         console.error(error);
     }
+}
+
+
+function loadHistory() {
+    const history = storage.loadSessions();
+    ui.updateHistoryList(
+        history,
+        (id) => {
+            storage.deleteSession(id);
+            loadHistory();
+        },
+        (session) => {
+            ui.elements.inputArea.value = session.originalText;
+            if (session.type === 'summary') {
+                ui.renderSummary(session.content);
+            } else if (session.type === 'flashcard') {
+                ui.renderFlashcards(session.content);
+            } else if (session.type === 'chat') {
+                // Restore chat if we implemented saving it
+            }
+        }
+    );
 }

@@ -13,7 +13,15 @@ export const elements = {
     closeModal: document.getElementById('close-modal'),
     saveSettings: document.getElementById('save-settings'),
     flashcardCountInput: document.getElementById('flashcard-count'),
-    flashcardCountInfo: document.getElementById('flashcard-count-value')
+    flashcardCountInfo: document.getElementById('flashcard-count-value'),
+
+    // Notebooks
+    dashboard: document.getElementById('notebook-dashboard'),
+    notebooksGrid: document.getElementById('notebooks-grid'),
+    btnCreateNotebook: document.getElementById('btn-create-notebook'),
+    btnBackDashboard: document.getElementById('btn-back-dashboard'),
+    dashUserName: document.getElementById('dash-user-name'),
+    dashBtnLogout: document.getElementById('dash-btn-logout')
 };
 
 export function toggleLoading(isLoading) {
@@ -24,6 +32,43 @@ export function toggleLoading(isLoading) {
         elements.loadingIndicator.classList.add('hidden');
         elements.outputArea.classList.remove('hidden');
     }
+}
+
+export function renderDashboard(notebooks, onSelect, onDelete) {
+    // Keep the "Create New" card
+    const createBtn = elements.btnCreateNotebook;
+    elements.notebooksGrid.innerHTML = '';
+    elements.notebooksGrid.appendChild(createBtn);
+
+    notebooks.forEach(notebook => {
+        const card = document.createElement('div');
+        card.className = 'notebook-card fade-in';
+        const date = new Date(notebook.lastModified).toLocaleDateString();
+
+        // Badge Logic
+        const isCloud = notebook.source === 'cloud';
+        const badgeClass = isCloud ? 'badge-cloud' : 'badge-local';
+        const badgeText = isCloud ? '☁️ Cloud' : '💻 Local';
+
+        card.innerHTML = `
+            <div class="notebook-badge ${badgeClass}">${badgeText}</div>
+            <h3>${notebook.title}</h3>
+            <div class="notebook-meta">Actualizado: ${date}</div>
+            <div class="card-actions">
+                <button class="btn-card-action delete-btn" title="Borrar">×</button>
+            </div>
+        `;
+
+        card.addEventListener('click', () => onSelect(notebook.id));
+        card.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`¿Borrar cuaderno "${notebook.title}"?`)) {
+                onDelete(notebook.id);
+            }
+        });
+
+        elements.notebooksGrid.appendChild(card);
+    });
 }
 
 export function renderSummary(summary) {
@@ -129,6 +174,11 @@ export function renderHistoryItem(session, onClick) {
 
 export function updateHistoryList(sessions, onDelete, onLoad) {
     elements.historyList.innerHTML = '';
+    if (!sessions || sessions.length === 0) {
+        elements.historyList.innerHTML = '<div style="padding:0.5rem; color:var(--text-muted); font-size:0.9rem;">Vacío</div>';
+        return;
+    }
+
     sessions.forEach(session => {
         const el = renderHistoryItem(session, onLoad);
         el.querySelector('.delete-btn').addEventListener('click', (e) => {
@@ -137,4 +187,8 @@ export function updateHistoryList(sessions, onDelete, onLoad) {
         });
         elements.historyList.appendChild(el);
     });
+}
+
+export function promptNewNotebook() {
+    return prompt('Nombre del nuevo cuaderno:', 'Nuevo Cuaderno');
 }

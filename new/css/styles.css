@@ -203,6 +203,81 @@ textarea {
     color: #ef4444;
 }
 
+/* Sidebar Sections */
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    flex: 1;
+    min-height: 0;
+    /* recursive flex fix */
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.section-header h3 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-icon-small {
+    font-size: 0.9rem;
+    padding: 0.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-main);
+}
+
+.btn-icon-small:hover {
+    background-color: #e2e8f0;
+}
+
+.sidebar-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sidebar-item {
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    border: 1px solid transparent;
+}
+
+.sidebar-item:hover {
+    background-color: #f1f5f9;
+}
+
+.sidebar-item.active {
+    background-color: white;
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+    font-weight: 500;
+}
+
+.sidebar-item .delete-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.sidebar-item:hover .delete-btn {
+    opacity: 1;
+}
+
 /* Top Bar */
 .top-bar {
     height: 64px;
@@ -687,4 +762,142 @@ input[type="range"] {
 
 .hidden {
     display: none !important;
+}
+
+/* Notebook Dashboard */
+.dashboard-container {
+    height: 100vh;
+    padding: 2rem;
+    background-color: var(--background-color);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    color: var(--text-main);
+}
+
+.notebooks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.notebook-card {
+    background-color: var(--surface-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    height: 200px;
+    /* Square-ish */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.notebook-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.notebook-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.notebook-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.notebook-card.new-notebook {
+    border: 2px dashed var(--border-color);
+    background-color: transparent;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.notebook-card.new-notebook:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: #f8fafc;
+}
+
+.notebook-card.new-notebook .icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.card-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.notebook-card:hover .card-actions {
+    opacity: 1;
+}
+
+.btn-card-action {
+    background: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    color: #ef4444;
+}
+
+.user-profile-widget {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 500;
+}
+
+/* Badges */
+.notebook-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-cloud {
+    background-color: #e0e7ff;
+    /* Indigo 100 */
+    color: var(--primary-color);
+}
+
+.badge-local {
+    background-color: #f1f5f9;
+    /* Slate 100 */
+    color: var(--text-muted);
 }

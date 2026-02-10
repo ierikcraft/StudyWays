@@ -15,7 +15,7 @@ export function getUser() {
 export function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search);
     const name = params.get('name');
-    const mail = params.get('email');
+    const mail = params.get('email') || params.get('mail');
     const id = params.get('id');
 
     if (name && mail && id) {

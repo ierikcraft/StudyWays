@@ -33,13 +33,34 @@
         </div>
     </div>
 
+    <!-- Notebook Dashboard -->
+    <div id="notebook-dashboard" class="dashboard-container hidden">
+        <header class="dashboard-header">
+            <h1>Mis Cuadernos</h1>
+            <div class="user-profile-widget">
+                <span id="dash-user-name">Usuario</span>
+                <button id="dash-btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
+            </div>
+        </header>
+        <div class="notebooks-grid" id="notebooks-grid">
+            <!-- Notebook cards injected here -->
+            <div class="notebook-card new-notebook" id="btn-create-notebook">
+                <span class="icon">➕</span>
+                <span>Nuevo Cuaderno</span>
+            </div>
+        </div>
+    </div>
+
     <div id="app-container" class="app-container hidden">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="logo">
-                <h2>📚 StudyWays</h2>
+            <div class="logo" style="cursor: pointer;" id="btn-back-dashboard">
+                <h2>🔙 Volver</h2>
             </div>
-            <div class="history-container">
+
+            <!-- History Section (Active Notebook) -->
+            <div class="sidebar-section history-container"
+                style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
                 <h3>Historial</h3>
                 <div id="history-list" class="history-list">
                     <!-- History items will be injected here -->
