@@ -94,6 +94,18 @@ textarea {
     display: none !important;
 }
 
+/* Site alert banner */
+.site-alert {
+    background-color: #ef4444; /* red-500 */
+    color: #ffffff;
+    text-align: center;
+    padding: 0.35rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
 /* Animations */
 @keyframes fadeIn {
     from {
