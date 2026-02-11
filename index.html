@@ -18,7 +18,7 @@
 
 <body>
     
-    <!-- Si se experimentan problemas, descomentas esta linea -->
+    <!-- Si se experimentan problemas descomentas esta linea -->
     <!--  <div class="site-alert" role="alert">StudyWays está experimentando problemas</div> -->
     
     
@@ -46,10 +46,7 @@
                 <h2>📚 StudyWays</h2>
             </div>
             <div class="history-container">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <h3>Historial</h3>
-                    <button id="btn-open-history" class="btn small" title="Abrir historial de accidentes">Historial de accidentes</button>
-                </div>
+                <h3>Historial</h3>
                 <div id="history-list" class="history-list">
                     <!-- History items will be injected here -->
                 </div>
@@ -140,13 +137,6 @@
     </div>
 
     <script type="module" src="js/app.js"></script>
-    <script>
-        // Abrir history.html desde el botón del sidebar
-        document.addEventListener('DOMContentLoaded', function(){
-            const btn = document.getElementById('btn-open-history');
-            if(btn) btn.addEventListener('click', ()=>{ window.location.href = 'history.html'; });
-        });
-    </script>
 </body>
 
 </html>
