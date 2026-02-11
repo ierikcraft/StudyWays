@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Historial de Accidentes</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .top-right { position: fixed; right: 1rem; top: 1rem; }
+    .container { max-width: 1000px; margin: 5rem auto; padding: 1rem; }
+    .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom:1rem }
+    .small-btn { padding: 0.3rem 0.6rem; font-size:0.9rem }
+    .accident-item { border-bottom:1px solid #eee; padding:0.75rem 0 }
+    .muted { color:#666; font-size:0.9rem }
+    .flex { display:flex; gap:0.5rem; align-items:center }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem }
+  </style>
+</head>
+<body>
+  <div class="top-right">
+    <button id="btn-login" class="small-btn">Login</button>
+  </div>
+
+  <div class="container">
+    <h1>Historial de Accidentes</h1>
+
+    <div id="admin-panel" class="card" style="display:none">
+      <h3>Registrar / Editar Accidente</h3>
+      <form id="accident-form">
+        <div class="grid-2">
+          <div>
+            <label>Hora y fecha</label>
+            <input id="field-datetime" type="datetime-local" style="width:100%" />
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="field-status" style="width:100%">
+              <option value="abierto">abierto</option>
+              <option value="en progreso">en progreso</option>
+              <option value="resuelto">resuelto</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:0.5rem">
+          <label>Gravedad</label>
+          <select id="field-severity" style="width:100%">
+            <option value="baja">baja</option>
+            <option value="media">media</option>
+            <option value="alta">alta</option>
+          </select>
+        </div>
+
+        <div style="margin-top:0.5rem">
+          <label>Información</label>
+          <textarea id="field-info" rows="3" style="width:100%"></textarea>
+        </div>
+
+        <div class="grid-2" style="margin-top:0.5rem">
+          <div>
+            <label>Motivo</label>
+            <input id="field-reason" type="text" style="width:100%" />
+          </div>
+          <div>
+            <label>Tiempo estimado de resolver</label>
+            <input id="field-estimated" type="text" style="width:100%" placeholder="e.g. 2 horas" />
+          </div>
+        </div>
+
+        <div style="margin-top:0.75rem" class="flex">
+          <button id="btn-save" class="small-btn">Guardar</button>
+          <button id="btn-cancel-edit" type="button" class="small-btn">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Lista de accidentes</h3>
+      <div id="accidents-list">
+        <p class="muted">Cargando...</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/history.js"></script>
+</body>
+</html>
