@@ -89,8 +89,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === ui.elements.createExamModal) closeCreateExamModal();
     });
 
-    // If user already logged in, load their exams/dashboard
-    if (currentUser) showNotebookDashboard();
+    // If user already logged in, load their exams/dashboard and migrate any local data to Firebase
+    if (currentUser) {
+        showNotebookDashboard();
+        // run migration + sync in background
+        storage.migrateLocalDataToRemote(currentUser.id)
+            .then(async (res) => {
+                const migrated = (res.migratedExams || 0) + (res.migratedSessions || 0);
+                if (migrated > 0) {
+                    alert(`Migración completada: ${res.migratedExams} exámenes y ${res.migratedSessions} sesiones migradas a Firebase.`);
+                }
+                // refresh UI to reflect migrated items
+                await refreshExamsList();
+                await renderNotebooksDashboard();
+            })
+            .catch(err => console.warn('migration failed', err));
+    }
 });
 
 async function loadExams() {

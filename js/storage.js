@@ -164,3 +164,66 @@ export async function clearHistory(uid, examId) {
         localClearHistory(uid, examId);
     }
 }
+
+// Migrate legacy localStorage data (old `studyways_data`) and sync pending local exams/sessions to Firebase when possible.
+// Returns { migratedExams, migratedSessions }
+export async function migrateLocalDataToRemote(uid) {
+    ensureArg(uid, 'uid');
+    let migratedExams = 0;
+    let migratedSessions = 0;
+
+    // 1) Migrate legacy single-key sessions (pre-exam implementation)
+    try {
+        const legacyKey = 'studyways_data';
+        const raw = localStorage.getItem(legacyKey);
+        if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length > 0) {
+                // create a dedicated exam for imported sessions
+                const importTitle = 'Importado (local)';
+                const importExam = await createExam(uid, { emoji: '📥', title: importTitle });
+                // Save each legacy session under the new exam
+                for (const s of arr) {
+                    // preserve original id/date when present
+                    await saveSession(uid, importExam.id, s);
+                    migratedSessions++;
+                }
+                // remove old legacy key
+                localStorage.removeItem(legacyKey);
+                // if importExam was newly created on remote (non-numeric id) count it as migrated
+                if (!/^[0-9]+$/.test(String(importExam.id))) migratedExams++;
+            }
+        }
+    } catch (err) {
+        console.warn('Error migrating legacy sessions', err.message);
+    }
+
+    // 2) Sync any exams that were saved locally (fallback) to Firebase
+    try {
+        const localEx = localListExams(uid);
+        for (const le of localEx) {
+            // consider numeric IDs as local (timestamp-based)
+            const isLocalId = /^[0-9]+$/.test(String(le.id));
+            if (!isLocalId) continue; // likely already a server id
+
+            // attempt to create on Firebase; createExam will try Firebase first
+            const pushed = await createExam(uid, { emoji: le.emoji, title: le.title });
+
+            // if creation produced a real firebase id (non-numeric), migrate sessions
+            if (!/^[0-9]+$/.test(String(pushed.id))) {
+                const sessions = localLoadSessions(uid, le.id);
+                for (const s of sessions) {
+                    await saveSession(uid, pushed.id, s);
+                    migratedSessions++;
+                }
+                // remove old local exam + its sessions
+                localDeleteExam(uid, le.id);
+                migratedExams++;
+            }
+        }
+    } catch (err) {
+        console.warn('Error syncing local exams to remote', err.message);
+    }
+
+    return { migratedExams, migratedSessions };
+}
