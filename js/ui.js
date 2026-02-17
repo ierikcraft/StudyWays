@@ -154,6 +154,7 @@ export function renderExamItem(exam, onSelect) {
     const item = document.createElement('div');
     item.className = 'exam-item';
     item.dataset.id = exam.id;
+
     item.innerHTML = `
         <div style="font-size:1.1rem; width:28px; text-align:center;">${exam.emoji || '📘'}</div>
         <div class="exam-meta">

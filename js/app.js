@@ -89,21 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === ui.elements.createExamModal) closeCreateExamModal();
     });
 
-    // If user already logged in, load their exams/dashboard and migrate any local data to Firebase
+    // If user already logged in, show notebook dashboard (local-only storage)
     if (currentUser) {
         showNotebookDashboard();
-        // run migration + sync in background
-        storage.migrateLocalDataToRemote(currentUser.id)
-            .then(async (res) => {
-                const migrated = (res.migratedExams || 0) + (res.migratedSessions || 0);
-                if (migrated > 0) {
-                    alert(`Migración completada: ${res.migratedExams} exámenes y ${res.migratedSessions} sesiones migradas a Firebase.`);
-                }
-                // refresh UI to reflect migrated items
-                await refreshExamsList();
-                await renderNotebooksDashboard();
-            })
-            .catch(err => console.warn('migration failed', err));
     }
 });
 
@@ -123,7 +111,7 @@ async function loadExams() {
         if (!currentExam) selectExam(exams[0]);
     } catch (err) {
         console.error('Error loading exams', err);
-        alert('No se pudieron cargar los exámenes. Comprueba la conexión a Firebase.');
+        alert('No se pudieron cargar los exámenes.');
     }
 }
 
@@ -165,19 +153,15 @@ function closeCreateExamModal() {
 }
 
 async function saveNewExam() {
+    if (!currentUser) return alert('Debes iniciar sesión para crear un examen.');
     const emoji = ui.elements.examEmojiInput.value.trim() || '📘';
     const title = ui.elements.examTitleInput.value.trim() || 'Nuevo examen';
-    try {
-        const exam = await storage.createExam(currentUser.id, { emoji, title });
-        closeCreateExamModal();
-        await refreshExamsList();
-        selectExam(exam);
-        // Open the study panel after creating/selecting
-        showAppContainer();
-    } catch (err) {
-        console.error(err);
-        alert('No se pudo crear el examen.');
-    }
+    const exam = await storage.createExam(currentUser.id, { emoji, title });
+    closeCreateExamModal();
+    await refreshExamsList();
+    selectExam(exam);
+    // Open the study panel after creating/selecting
+    showAppContainer();
 }
 
 function showApp(user) {
