@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth Actions
     document.getElementById('btn-login').addEventListener('click', auth.login);
     document.getElementById('btn-logout').addEventListener('click', auth.logout);
+    const dashLogout = document.getElementById('dash-btn-logout');
+    if (dashLogout) dashLogout.addEventListener('click', auth.logout);
 
     // Main Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
@@ -73,14 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.elements.cancelExamBtn.addEventListener('click', closeCreateExamModal);
     ui.elements.saveExamBtn.addEventListener('click', saveNewExam);
 
+    // Notebook dashboard: create button (if present on the landing dashboard)
+    const btnCreateNotebook = document.getElementById('btn-create-notebook');
+    if (btnCreateNotebook) btnCreateNotebook.addEventListener('click', openCreateExamModal);
+
+    // Back to dashboard from app
+    const btnBack = document.getElementById('btn-back-dashboard');
+    if (btnBack) btnBack.addEventListener('click', showNotebookDashboard);
+
     // Close modal on outside click
     window.addEventListener('click', (e) => {
         if (e.target === ui.elements.modal) closeSettings();
         if (e.target === ui.elements.createExamModal) closeCreateExamModal();
     });
 
-    // If user already logged in, load their exams
-    if (currentUser) loadExams();
+    // If user already logged in, load their exams/dashboard
+    if (currentUser) showNotebookDashboard();
 });
 
 async function loadExams() {
@@ -148,6 +158,8 @@ async function saveNewExam() {
         closeCreateExamModal();
         await refreshExamsList();
         selectExam(exam);
+        // Open the study panel after creating/selecting
+        showAppContainer();
     } catch (err) {
         console.error(err);
         alert('No se pudo crear el examen.');
@@ -155,20 +167,74 @@ async function saveNewExam() {
 }
 
 function showApp(user) {
+    // After login, show the notebook dashboard (prototype) instead of opening app directly
     document.getElementById('landing-page').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('notebook-dashboard').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+
     document.getElementById('user-name').textContent = user.name;
+    document.getElementById('dash-user-name').textContent = user.name;
     // Optional: Set avatar if available or initials
     document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
 
-    // load user exams + history
-    loadExams();
+    // render dashboard
+    renderNotebooksDashboard();
 }
 
 function showLanding() {
     document.getElementById('landing-page').classList.remove('hidden');
     document.getElementById('app-container').classList.add('hidden');
+    document.getElementById('notebook-dashboard').classList.add('hidden');
 }
+
+function showNotebookDashboard() {
+    // show dashboard (used from Back button)
+    document.getElementById('landing-page').classList.add('hidden');
+    document.getElementById('notebook-dashboard').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+    if (currentUser) document.getElementById('dash-user-name').textContent = currentUser.name;
+    renderNotebooksDashboard();
+}
+
+function showAppContainer() {
+    document.getElementById('landing-page').classList.add('hidden');
+    document.getElementById('notebook-dashboard').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+}
+
+async function renderNotebooksDashboard() {
+    if (!currentUser) return;
+    const grid = document.getElementById('notebooks-grid');
+    grid.querySelectorAll('.notebook-card.item').forEach(n => n.remove());
+
+    try {
+        const exams = await storage.listExams(currentUser.id);
+        exams.forEach(exam => {
+            const card = document.createElement('div');
+            card.className = 'notebook-card item';
+            card.dataset.id = exam.id;
+            card.innerHTML = `
+                <div style="font-size:1.2rem; margin-right:0.5rem;">${exam.emoji || '📘'}</div>
+                <div style="display:flex; flex-direction:column;">
+                    <strong>${exam.title}</strong>
+                    <small style="color:var(--text-muted);">Creado: ${new Date(exam.createdAt || Date.now()).toLocaleDateString()}</small>
+                </div>
+            `;
+            card.addEventListener('click', async () => {
+                // switch to app and select exam
+                selectExam(exam);
+                await refreshExamsList();
+                showAppContainer();
+            });
+            // insert before the "new" card
+            const newCard = document.getElementById('btn-create-notebook');
+            grid.insertBefore(card, newCard);
+        });
+    } catch (err) {
+        console.error('Error rendering notebooks dashboard', err);
+    }
+}
+
 
 function updateCharCount(e) {
     const count = e.target.value.length;
