@@ -14,6 +14,8 @@ Do not include any other text, intro, or outro. Just the P/R pairs.`;
 
 const SYSTEM_PROMPT_CHAT = `You are a helpful study assistant. Answer the user's question based strictly on the provided context text. If the answer is not in the text, say you don't know based on the context. Be concise and clear.`;
 
+const SYSTEM_PROMPT_TEST = (count) => `You are a study test generator. Generate exactly ${count} multiple-choice questions based ONLY on the provided text. For each question output EXACTLY four lines in this order and format (no extra text or numbering):\nP: <question>\nF: <wrong answer>\nF: <wrong answer>\nV: <correct answer>\nRepeat for every question. Do NOT include explanations or headers.`;
+
 /**
  * Calls the Groq API.
  * @param {string} messages - Array of message objects.
@@ -62,6 +64,41 @@ export async function generateFlashcards(text, count = 5) {
     ];
     const rawOutput = await callGroq(messages);
     return parseFlashcards(rawOutput);
+}
+
+export async function generateTest(text, count = 5) {
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT_TEST(count) },
+        { role: 'user', content: text }
+    ];
+    const rawOutput = await callGroq(messages);
+    return parseTest(rawOutput);
+}
+
+function parseTest(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const questions = [];
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+        if (line.startsWith('P:')) {
+            const q = { question: line.substring(2).trim(), options: [] };
+            // expect next three lines to be F/F/V in any order per spec
+            for (let j = 1; j <= 3 && (i + j) < lines.length; j++) {
+                const optLine = lines[i + j];
+                if (optLine.startsWith('F:')) {
+                    q.options.push({ text: optLine.substring(2).trim(), correct: false });
+                } else if (optLine.startsWith('V:')) {
+                    q.options.push({ text: optLine.substring(2).trim(), correct: true });
+                }
+            }
+            questions.push(q);
+            i += 4; // move to next block
+        } else {
+            i++;
+        }
+    }
+    return questions;
 }
 
 export async function chatWithContext(context, question, history = []) {

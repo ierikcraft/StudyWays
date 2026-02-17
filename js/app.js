@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Main Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
     ui.elements.actionFlashcards.addEventListener('click', handleFlashcards);
+    ui.elements.actionTest.addEventListener('click', handleTest);
     ui.elements.actionChat.addEventListener('click', initializeChat);
     document.getElementById('input-text').addEventListener('input', updateCharCount);
 
@@ -177,6 +178,20 @@ function showApp(user) {
 
     // render dashboard
     renderNotebooksDashboard();
+
+    // delete-all button handler (local-only storage)
+    const delAllBtn = document.getElementById('btn-delete-all');
+    if (delAllBtn) {
+        delAllBtn.addEventListener('click', async () => {
+            if (!currentUser) return alert('Debes iniciar sesión');
+            const ok = confirm('Eliminar todas las libretas y su historial (local)?');
+            if (!ok) return;
+            await storage.deleteAllExams(currentUser.id);
+            await refreshExamsList();
+            renderNotebooksDashboard();
+            alert('Todas las libretas han sido eliminadas (local).');
+        });
+    }
 }
 
 function showLanding() {
@@ -238,6 +253,44 @@ function updateCharCount(e) {
     const count = e.target.value.length;
     document.getElementById('char-count').textContent = `${count} caracteres`;
 }
+
+// --- Test Logic ---
+async function handleTest() {
+    const text = ui.elements.inputArea.value.trim();
+    if (!text) return alert('Por favor ingresa un texto para generar el test.');
+    ui.toggleLoading(true);
+    try {
+        const questions = await api.generateTest(text, ui.elements.flashcardCountInput.value || 5);
+
+        // Shuffle questions and shuffle options inside each question
+        shuffleArray(questions);
+        questions.forEach(q => shuffleArray(q.options));
+
+        // Render test UI
+        ui.renderTest(questions, async (result) => {
+            // Save test session
+            await storage.saveSession(currentUser.id, currentExam.id, {
+                type: 'test',
+                content: { questions: result.questions, score: result.score, correctCount: result.correctCount },
+                originalText: text
+            });
+            await loadHistory();
+        });
+    } catch (err) {
+        console.error(err);
+        alert('Error generando test: ' + err.message);
+    } finally {
+        ui.toggleLoading(false);
+    }
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+
 
 // --- Settings Logic ---
 function openSettings() {

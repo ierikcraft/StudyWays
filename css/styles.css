@@ -322,8 +322,16 @@ textarea:focus {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+    flex-wrap: wrap; /* allow buttons to flow to the next line when space is limited */
 }
 
+.action-buttons .btn {
+    min-width: 120px; /* keep buttons readable when wrapping */
+}
+
+@media (max-width: 520px) {
+    .action-buttons .btn { min-width: 100%; }
+}
 .btn {
     flex: 1;
     padding: 0.75rem 1rem;

@@ -76,3 +76,11 @@ export async function clearHistory(uid, examId) {
     localStorage.removeItem(sessionsKey(uid, examId));
 }
 
+export async function deleteAllExams(uid) {
+    ensureArg(uid, 'uid');
+    const exams = readExams(uid);
+    for (const e of exams) {
+        try { localStorage.removeItem(sessionsKey(uid, e.id)); } catch (_) {}
+    }
+    localStorage.removeItem(examsKey(uid));
+}

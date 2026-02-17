@@ -3,6 +3,7 @@ export const elements = {
     outputArea: document.getElementById('output-content'),
     actionSummary: document.getElementById('btn-summary'),
     actionFlashcards: document.getElementById('btn-flashcards'),
+    actionTest: document.getElementById('btn-test'),
     actionChat: document.getElementById('btn-chat'),
     actionSettings: document.getElementById('btn-flashcards-settings'),
     historyList: document.getElementById('history-list'),
@@ -105,6 +106,70 @@ export function renderChatInterface(onSend) {
     });
 }
 
+export function renderTest(questions, onComplete) {
+    elements.outputArea.innerHTML = '';
+    const container = document.createElement('div');
+    container.className = 'test-container fade-in';
+
+    const form = document.createElement('div');
+    form.className = 'test-questions';
+
+    const answersState = [];
+
+    questions.forEach((q, idx) => {
+        const qEl = document.createElement('div');
+        qEl.className = 'test-question card';
+        qEl.style.marginBottom = '0.75rem';
+        qEl.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>Pregunta ${idx + 1}</strong>
+                <span class="muted">${q.question}</span>
+            </div>
+            <div class="test-options" style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+        `;
+
+        const optsContainer = qEl.querySelector('.test-options');
+        q.options.forEach((opt, oi) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn secondary';
+            btn.style.textAlign = 'left';
+            btn.textContent = opt.text;
+            btn.addEventListener('click', () => {
+                // mark selected and show result
+                if (answersState[idx]) return; // already answered
+                answersState[idx] = { selected: oi, correct: !!opt.correct };
+                btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
+                btn.style.color = 'white';
+                // disable siblings
+                Array.from(optsContainer.children).forEach((c, ci) => {
+                    c.disabled = true;
+                    if (ci !== oi) c.style.opacity = '0.8';
+                });
+            });
+            optsContainer.appendChild(btn);
+        });
+
+        form.appendChild(qEl);
+    });
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn primary';
+    submitBtn.textContent = 'Finalizar test';
+    submitBtn.style.marginTop = '0.75rem';
+    submitBtn.addEventListener('click', () => {
+        const answered = answersState.filter(Boolean);
+        const correctCount = answered.reduce((acc, a) => acc + (a.correct ? 1 : 0), 0);
+        const score = Math.round((correctCount / questions.length) * 100);
+        elements.contentTitle.textContent = `Test — Resultado: ${correctCount}/${questions.length} (${score}%)`;
+        if (onComplete) onComplete({ score, correctCount, total: questions.length, questions });
+    });
+
+    container.appendChild(form);
+    container.appendChild(submitBtn);
+    elements.outputArea.appendChild(container);
+    elements.contentTitle.textContent = 'Test';
+}
+
 export function appendChatMessage(role, text) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -124,6 +189,7 @@ export function renderHistoryItem(session, onClick) {
     if (session.type === 'summary') typeLabel = '📝 Resumen';
     if (session.type === 'flashcard') typeLabel = '🗂️ Flashcards';
     if (session.type === 'chat') typeLabel = '💬 Chat';
+    if (session.type === 'test') typeLabel = '🧪 Test';
 
     item.innerHTML = `
         <div class="history-info">
