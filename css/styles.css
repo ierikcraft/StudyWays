@@ -461,17 +461,33 @@ textarea:focus {
     gap: 1rem;
 }
 
-.progress-circle {
-    width: 160px;
-    height: 160px;
-    display: grid;
-    place-items: center;
+/* simple per-question index instead of circle */
+.q-indexes {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0.25rem;
 }
-.progress-circle svg { transform: rotate(-90deg); width: 100%; height: 100%; }
-.progress-circle circle.bg { stroke: #f1f5f9; stroke-width: 12; fill: none; }
-.progress-circle circle.fg { stroke: var(--primary-color); stroke-width: 12; stroke-linecap: round; fill: none; stroke-dasharray: 440; stroke-dashoffset: 440; transition: stroke-dashoffset 900ms cubic-bezier(.22,.9,.32,1); }
-.progress-value { font-size: 1.5rem; font-weight: 700; }
-.progress-desc { text-align: center; color: var(--text-muted); padding: 0 0.5rem; }
+.q-index-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.q-index-btn.current { border-color: var(--primary-color); background: rgba(99,102,241,0.06); color: var(--text-main); }
+.q-index-btn.answered.correct { background: #16a34a; color: white; border-color: #16a34a; }
+.q-index-btn.answered.incorrect { background: #ef4444; color: white; border-color: #ef4444; }
+
+.progress-value { font-size: 1.25rem; font-weight: 700; }
+.progress-desc { text-align: center; color: var(--text-muted); padding: 0 0.5rem; font-size: 0.9rem; }
 
 .test-actions { display:flex; gap:0.5rem; margin-top:0.5rem; }
 .test-nav { display:flex; gap:0.5rem; align-items:center; margin-top:0.75rem; }

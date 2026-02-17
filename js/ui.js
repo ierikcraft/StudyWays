@@ -25,7 +25,14 @@ export const elements = {
     closeModal: document.getElementById('close-modal'),
     saveSettings: document.getElementById('save-settings'),
     flashcardCountInput: document.getElementById('flashcard-count'),
-    flashcardCountInfo: document.getElementById('flashcard-count-value')
+    flashcardCountInfo: document.getElementById('flashcard-count-value'),
+
+    // Test count modal
+    testCountModal: document.getElementById('test-count-modal'),
+    testCountInput: document.getElementById('test-count-input'),
+    testCountStartBtn: document.getElementById('start-test'),
+    testCountCloseBtn: document.getElementById('close-test-count'),
+    testCountCancelBtn: document.getElementById('cancel-test')
 };
 
 export function toggleLoading(isLoading) {
@@ -165,35 +172,65 @@ export function renderTest(questions, onComplete) {
                 });
                 btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
                 btn.style.color = 'white';
+                // reflect in side index
+                const idxBtn = qIndexesEl.children[i];
+                if (idxBtn) {
+                    idxBtn.classList.add('answered');
+                    idxBtn.classList.add(opt.correct ? 'correct' : 'incorrect');
+                    idxBtn.classList.remove('current');
+                }
                 // enable next button
                 nextBtn.disabled = false;
             });
             optsContainer.appendChild(btn);
         });
 
+        // focus first option for better keyboard UX
+        const firstOption = optsContainer.querySelector('button:not(:disabled)');
+        if (firstOption) firstOption.focus();
+
         qWrapper.appendChild(qCard);
+        // update status indexes (answered/current)
+        Array.from(qIndexesEl.children).forEach((btn, bi) => {
+            btn.classList.toggle('current', bi === i);
+            btn.classList.remove('answered', 'correct', 'incorrect');
+            if (answers[bi]) {
+                btn.classList.add('answered');
+                btn.classList.add(answers[bi].correct ? 'correct' : 'incorrect');
+            }
+        });
         // disable next if unanswered
         nextBtn.disabled = !answers[i];
         prevBtn.disabled = i === 0;
     }
 
-    // side panel content (progress circle + summary)
-    const progressWrap = document.createElement('div');
-    progressWrap.className = 'progress-circle';
-    progressWrap.innerHTML = `
-        <svg viewBox="0 0 140 140" role="img" aria-label="Resultado">
-            <circle class="bg" cx="70" cy="70" r="70"></circle>
-            <circle class="fg" cx="70" cy="70" r="70"></circle>
-        </svg>
+    // side panel: simple progress + per-question indicators (no circle)
+    const statusWrap = document.createElement('div');
+    statusWrap.className = 'test-status';
+    statusWrap.innerHTML = `
         <div class="progress-value">0%</div>
+        <div class="q-indexes" aria-hidden="true"></div>
+        <div class="progress-desc">Resuelve las preguntas para ver tu resultado.</div>
     `;
 
-    const progressDesc = document.createElement('div');
-    progressDesc.className = 'progress-desc';
-    progressDesc.textContent = 'Resuelve las preguntas para ver tu resultado.';
+    const progressValueEl = statusWrap.querySelector('.progress-value');
+    const qIndexesEl = statusWrap.querySelector('.q-indexes');
+    const progressDescEl = statusWrap.querySelector('.progress-desc');
 
-    side.appendChild(progressWrap);
-    side.appendChild(progressDesc);
+    // build index buttons
+    qs.forEach((_, i) => {
+        const idxBtn = document.createElement('button');
+        idxBtn.className = 'q-index-btn';
+        idxBtn.title = `Ir a la pregunta ${i + 1}`;
+        idxBtn.textContent = String(i + 1);
+        idxBtn.addEventListener('click', () => {
+            index = i;
+            renderQuestion(index);
+        });
+        qIndexesEl.appendChild(idxBtn);
+    });
+
+    side.appendChild(statusWrap);
 
     // navigation buttons
     const nav = document.createElement('div');
@@ -225,18 +262,8 @@ export function renderTest(questions, onComplete) {
             const total = qs.length;
             const percent = Math.round((correctCount / total) * 100);
 
-            // animate progress circle
-            const fg = progressWrap.querySelector('circle.fg');
-            const circumference = 2 * Math.PI * 70;
-            const offset = circumference * (1 - percent / 100);
-            fg.style.strokeDasharray = circumference;
-            fg.style.strokeDashoffset = circumference; // start
-            // force reflow then animate
-            requestAnimationFrame(() => {
-                fg.style.strokeDashoffset = offset;
-            });
-
-            progressWrap.querySelector('.progress-value').textContent = `${percent}%`;
+            // update simple progress UI
+            progressValueEl.textContent = `${percent}%`;
 
             // descriptive sentence
             let msg = '';
@@ -245,9 +272,17 @@ export function renderTest(questions, onComplete) {
             else if (percent >= 35) msg = 'Necesitas practicar más en este tema.';
             else msg = 'Recomendado revisar desde el inicio y repetir ejercicios.';
 
-            progressDesc.textContent = `${correctCount}/${total} correctas — ${msg}`;
-
+            progressDescEl.textContent = `${correctCount}/${total} correctas — ${msg}`;
             elements.contentTitle.textContent = `Test — Resultado: ${percent}%`;
+
+            // mark status buttons
+            Array.from(qIndexesEl.children).forEach((btn, bi) => {
+                btn.classList.remove('current');
+                if (answers[bi]) {
+                    btn.classList.add('answered');
+                    btn.classList.add(answers[bi].correct ? 'correct' : 'incorrect');
+                }
+            });
 
             // callback to save session
             if (onComplete) onComplete({ score: percent, correctCount, total, questions: qs });
@@ -257,7 +292,6 @@ export function renderTest(questions, onComplete) {
             nextBtn.disabled = false;
             nextBtn.removeEventListener('click', () => {});
             nextBtn.addEventListener('click', () => {
-                // do nothing or scroll to top
                 elements.outputArea.scrollTop = 0;
             });
         }
@@ -272,10 +306,11 @@ export function renderTest(questions, onComplete) {
         shuffle(qs);
         index = 0;
         for (let i = 0; i < answers.length; i++) answers[i] = null;
-        progressWrap.querySelector('.progress-value').textContent = `0%`;
-        const fg = progressWrap.querySelector('circle.fg');
-        fg.style.strokeDashoffset = 2 * Math.PI * 70;
-        progressDesc.textContent = 'Resuelve las preguntas para ver tu resultado.';
+        progressValueEl.textContent = `0%`;
+        progressDescEl.textContent = 'Resuelve las preguntas para ver tu resultado.';
+        Array.from(qIndexesEl.children).forEach(btn => {
+            btn.classList.remove('answered', 'correct', 'incorrect', 'current');
+        });
         elements.contentTitle.textContent = 'Test';
         renderQuestion(index);
     });

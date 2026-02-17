@@ -70,6 +70,51 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.elements.flashcardCountInfo.textContent = e.target.value;
     });
 
+    // Test-count modal handlers
+    if (ui.elements.testCountStartBtn) {
+        ui.elements.testCountStartBtn.addEventListener('click', async () => {
+            const raw = ui.elements.testCountInput.value;
+            const count = parseInt(raw, 10);
+            if (!Number.isInteger(count) || count < 1 || count > 50) {
+                return alert('Introduce un número válido entre 1 y 50.');
+            }
+            ui.elements.testCountModal.classList.add('hidden');
+
+            // proceed with generating the test (same logic as previous inline flow)
+            const text = ui.elements.inputArea.value.trim();
+            if (!text) return alert('Por favor ingresa un texto para generar el test.');
+            if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+
+            ui.toggleLoading(true);
+            try {
+                const questions = await api.generateTest(text, count);
+                // Shuffle questions and shuffle options inside each question
+                shuffleArray(questions);
+                questions.forEach(q => shuffleArray(q.options));
+
+                ui.elements.contentTitle.textContent = `Test — ${count} preguntas`;
+
+                ui.renderTest(questions, async (result) => {
+                    // Save test session (include meta.count)
+                    await storage.saveSession(currentUser.id, currentExam.id, {
+                        type: 'test',
+                        content: { questions: result.questions, score: result.score, correctCount: result.correctCount },
+                        originalText: text,
+                        meta: { count }
+                    });
+                    await loadHistory();
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Error generando test: ' + err.message);
+            } finally {
+                ui.toggleLoading(false);
+            }
+        });
+        ui.elements.testCountCancelBtn.addEventListener('click', () => ui.elements.testCountModal.classList.add('hidden'));
+        ui.elements.testCountCloseBtn.addEventListener('click', () => ui.elements.testCountModal.classList.add('hidden'));
+    }
+
     // Exams: create/select
     ui.elements.btnCreateExam.addEventListener('click', openCreateExamModal);
     ui.elements.closeCreateExam.addEventListener('click', closeCreateExamModal);
@@ -88,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => {
         if (e.target === ui.elements.modal) closeSettings();
         if (e.target === ui.elements.createExamModal) closeCreateExamModal();
+        if (e.target === ui.elements.testCountModal) ui.elements.testCountModal.classList.add('hidden');
     });
 
     // If user already logged in, show notebook dashboard (local-only storage)
@@ -260,43 +306,13 @@ async function handleTest() {
     if (!text) return alert('Por favor ingresa un texto para generar el test.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
-    // Ask user how many questions
+    // show modal to pick number of questions (replaces prompt())
     const defaultCount = Number(ui.elements.flashcardCountInput.value) || 5;
-    const raw = prompt('¿Cuántas preguntas quieres en el test? (1-50)', String(defaultCount));
-    if (raw === null) return; // user cancelled
-    const count = parseInt(raw, 10);
-    if (!Number.isInteger(count) || count < 1 || count > 50) return alert('Introduce un número válido entre 1 y 50.');
-
-    ui.toggleLoading(true);
-    try {
-        const questions = await api.generateTest(text, count);
-
-        // Shuffle questions and shuffle options inside each question
-        shuffleArray(questions);
-        questions.forEach(q => shuffleArray(q.options));
-
-        // Update title to reflect count
-        elements = ui.elements;
-        elements.contentTitle.textContent = `Test — ${count} preguntas`;
-
-        // Render test UI
-        ui.renderTest(questions, async (result) => {
-            // Save test session (include meta.count)
-            await storage.saveSession(currentUser.id, currentExam.id, {
-                type: 'test',
-                content: { questions: result.questions, score: result.score, correctCount: result.correctCount },
-                originalText: text,
-                meta: { count }
-            });
-            await loadHistory();
-        });
-    } catch (err) {
-        console.error(err);
-        alert('Error generando test: ' + err.message);
-    } finally {
-        ui.toggleLoading(false);
-    }
+    ui.elements.testCountInput.value = String(defaultCount);
+    ui.elements.testCountModal.classList.remove('hidden');
+    ui.elements.testCountInput.focus();
 }
+
 
 function shuffleArray(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
