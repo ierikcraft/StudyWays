@@ -95,10 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.elements.contentTitle.textContent = `Test — ${count} preguntas`;
 
                 ui.renderTest(questions, async (result) => {
-                    // Save test session (include meta.count)
+                    // Save test session (include user's answers + meta.count)
                     await storage.saveSession(currentUser.id, currentExam.id, {
                         type: 'test',
-                        content: { questions: result.questions, score: result.score, correctCount: result.correctCount },
+                        content: { questions: result.questions, userAnswers: result.userAnswers || [], score: result.score, correctCount: result.correctCount },
                         originalText: text,
                         meta: { count }
                     });
@@ -432,6 +432,21 @@ async function loadHistory() {
                 ui.renderSummary(session.content);
             } else if (session.type === 'flashcard') {
                 ui.renderFlashcards(session.content);
+            } else if (session.type === 'test') {
+                // show test in read-only review mode (allows "Volver a hacer" to start interactive)
+                const questions = session.content.questions || [];
+                if (!questions.length) return alert('No hay preguntas guardadas para esta sesión.');
+                const userAnswers = session.content.userAnswers || null;
+                ui.renderTest(questions, async (result) => {
+                    // if user repeats the test and finishes, save new session
+                    await storage.saveSession(currentUser.id, currentExam.id, {
+                        type: 'test',
+                        content: { questions: result.questions, userAnswers: result.userAnswers || [], score: result.score, correctCount: result.correctCount },
+                        originalText: session.originalText || ui.elements.inputArea.value,
+                        meta: { count: result.total }
+                    });
+                    await loadHistory();
+                }, { readOnly: true, userAnswers });
             } else if (session.type === 'chat') {
                 // Restore chat if implemented
             }

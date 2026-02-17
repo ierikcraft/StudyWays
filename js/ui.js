@@ -113,7 +113,7 @@ export function renderChatInterface(onSend) {
     });
 }
 
-export function renderTest(questions, onComplete) {
+export function renderTest(questions, onComplete, opts = {}) {
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'test-container fade-in';
@@ -128,6 +128,14 @@ export function renderTest(questions, onComplete) {
     const qs = questions.map(q => ({ question: q.question, options: q.options.map(o => ({ text: o.text, correct: !!o.correct })) }));
     let index = 0;
     const answers = Array(qs.length).fill(null);
+    // If caller provided previously selected answers (review mode), seed them here
+    if (opts.userAnswers && Array.isArray(opts.userAnswers)) {
+        opts.userAnswers.forEach((sel, i) => {
+            if (sel === null || typeof sel === 'undefined') return;
+            const correct = !!qs[i].options[sel] && !!qs[i].options[sel].correct;
+            answers[i] = { selected: sel, correct };
+        });
+    }
 
     const shuffle = (arr) => {
         for (let i = arr.length - 1; i > 0; i--) {
@@ -163,25 +171,31 @@ export function renderTest(questions, onComplete) {
                 btn.style.backgroundColor = answers[i].correct ? '#16a34a' : '#ef4444';
                 btn.style.color = 'white';
             }
-            btn.addEventListener('click', () => {
-                answers[i] = { selected: oi, correct: !!opt.correct };
-                // mark selection
-                Array.from(optsContainer.children).forEach((c, ci) => {
-                    c.disabled = true;
-                    c.style.opacity = '0.8';
+            if (opts.readOnly) {
+                // disable interaction in review mode, but highlight correct option border
+                btn.disabled = true;
+                if (opt.correct) btn.style.borderColor = '#16a34a';
+            } else {
+                btn.addEventListener('click', () => {
+                    answers[i] = { selected: oi, correct: !!opt.correct };
+                    // mark selection
+                    Array.from(optsContainer.children).forEach((c, ci) => {
+                        c.disabled = true;
+                        c.style.opacity = '0.8';
+                    });
+                    btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
+                    btn.style.color = 'white';
+                    // reflect in side index
+                    const idxBtn = qIndexesEl.children[i];
+                    if (idxBtn) {
+                        idxBtn.classList.add('answered');
+                        idxBtn.classList.add(opt.correct ? 'correct' : 'incorrect');
+                        idxBtn.classList.remove('current');
+                    }
+                    // enable next button
+                    nextBtn.disabled = false;
                 });
-                btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
-                btn.style.color = 'white';
-                // reflect in side index
-                const idxBtn = qIndexesEl.children[i];
-                if (idxBtn) {
-                    idxBtn.classList.add('answered');
-                    idxBtn.classList.add(opt.correct ? 'correct' : 'incorrect');
-                    idxBtn.classList.remove('current');
-                }
-                // enable next button
-                nextBtn.disabled = false;
-            });
+            }
             optsContainer.appendChild(btn);
         });
 
@@ -199,8 +213,8 @@ export function renderTest(questions, onComplete) {
                 btn.classList.add(answers[bi].correct ? 'correct' : 'incorrect');
             }
         });
-        // disable next if unanswered
-        nextBtn.disabled = !answers[i];
+        // disable next if unanswered (but allow navigation in review/readOnly)
+        nextBtn.disabled = !!opts.readOnly ? false : !answers[i];
         prevBtn.disabled = i === 0;
     }
 
@@ -284,8 +298,9 @@ export function renderTest(questions, onComplete) {
                 }
             });
 
-            // callback to save session
-            if (onComplete) onComplete({ score: percent, correctCount, total, questions: qs });
+            // callback to save session (include user's answers)
+            const userAnswers = answers.map(a => a ? a.selected : null);
+            if (onComplete) onComplete({ score: percent, correctCount, total, questions: qs, userAnswers });
 
             // change nextBtn to allow finishing/closing
             nextBtn.textContent = 'Hecho';
@@ -299,8 +314,13 @@ export function renderTest(questions, onComplete) {
 
     const retryBtn = document.createElement('button');
     retryBtn.className = 'btn secondary';
-    retryBtn.textContent = 'Reintentar';
+    retryBtn.textContent = opts.readOnly ? 'Volver a hacer' : 'Reintentar';
     retryBtn.addEventListener('click', () => {
+        // If reviewing a past session, start an interactive run with same questions
+        if (opts.readOnly) {
+            renderTest(questions, onComplete, {});
+            return;
+        }
         // reshuffle questions & options, reset answers
         qs.forEach(q => shuffle(q.options));
         shuffle(qs);
@@ -327,9 +347,11 @@ export function renderTest(questions, onComplete) {
 
     elements.outputArea.appendChild(container);
 
-    // initial shuffle and render
-    qs.forEach(q => shuffle(q.options));
-    shuffle(qs);
+    // initial shuffle and render — do NOT shuffle when reviewing a saved session
+    if (!opts.readOnly) {
+        qs.forEach(q => shuffle(q.options));
+        shuffle(qs);
+    }
     renderQuestion(index);
     elements.contentTitle.textContent = `Test — ${qs.length} preguntas`;
 }
@@ -356,11 +378,17 @@ export function renderHistoryItem(session, onClick) {
     if (session.type === 'chat') typeLabel = '💬 Chat';
     if (session.type === 'test') typeLabel = '🧪 Test';
 
+    const previewText = session.type === 'flashcard'
+        ? `${(session.content || []).length || 0} tarjetas`
+        : session.type === 'test'
+            ? `${session.content && session.content.score ? session.content.score + '% — ' + (session.content.correctCount || 0) + '/' + (session.content.total || session.content.questions?.length || '?') : (session.meta && session.meta.count ? session.meta.count + ' preguntas' : session.originalText.substring(0, 30) + '...')}`
+            : session.originalText ? session.originalText.substring(0, 30) + '...' : '';
+
     item.innerHTML = `
         <div class="history-info">
             <span class="history-type">${typeLabel}</span>
             <span class="history-date">${date}</span>
-            <span class="history-preview">${session.originalText.substring(0, 30)}...</span>
+            <span class="history-preview">${previewText}</span>
         </div>
         <button class="delete-btn" data-id="${session.id}">×</button>
     `;
