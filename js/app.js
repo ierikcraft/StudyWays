@@ -258,21 +258,35 @@ function updateCharCount(e) {
 async function handleTest() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para generar el test.');
+    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+
+    // Ask user how many questions
+    const defaultCount = Number(ui.elements.flashcardCountInput.value) || 5;
+    const raw = prompt('¿Cuántas preguntas quieres en el test? (1-50)', String(defaultCount));
+    if (raw === null) return; // user cancelled
+    const count = parseInt(raw, 10);
+    if (!Number.isInteger(count) || count < 1 || count > 50) return alert('Introduce un número válido entre 1 y 50.');
+
     ui.toggleLoading(true);
     try {
-        const questions = await api.generateTest(text, ui.elements.flashcardCountInput.value || 5);
+        const questions = await api.generateTest(text, count);
 
         // Shuffle questions and shuffle options inside each question
         shuffleArray(questions);
         questions.forEach(q => shuffleArray(q.options));
 
+        // Update title to reflect count
+        elements = ui.elements;
+        elements.contentTitle.textContent = `Test — ${count} preguntas`;
+
         // Render test UI
         ui.renderTest(questions, async (result) => {
-            // Save test session
+            // Save test session (include meta.count)
             await storage.saveSession(currentUser.id, currentExam.id, {
                 type: 'test',
                 content: { questions: result.questions, score: result.score, correctCount: result.correctCount },
-                originalText: text
+                originalText: text,
+                meta: { count }
             });
             await loadHistory();
         });
