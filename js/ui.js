@@ -111,16 +111,16 @@ export function renderTest(questions, onComplete) {
     const container = document.createElement('div');
     container.className = 'test-container fade-in';
 
-    const form = document.createElement('div');
-    form.className = 'test-questions';
+    const qWrapper = document.createElement('div');
+    qWrapper.className = 'test-questions-wrapper';
 
-    // Work on a local deep-copy so retry/shuffle doesn't mutate original
-    const localQuestions = questions.map(q => ({
-        question: q.question,
-        options: q.options.map(o => ({ text: o.text, correct: !!o.correct }))
-    }));
+    const side = document.createElement('div');
+    side.className = 'test-side';
 
-    let answersState = [];
+    // local copy so retry doesn't mutate original
+    const qs = questions.map(q => ({ question: q.question, options: q.options.map(o => ({ text: o.text, correct: !!o.correct })) }));
+    let index = 0;
+    const answers = Array(qs.length).fill(null);
 
     const shuffle = (arr) => {
         for (let i = arr.length - 1; i > 0; i--) {
@@ -129,86 +129,176 @@ export function renderTest(questions, onComplete) {
         }
     };
 
-    function renderQuestions() {
-        form.innerHTML = '';
-        answersState = [];
-        localQuestions.forEach((q, idx) => {
-            const qEl = document.createElement('div');
-            qEl.className = 'test-question card';
-            qEl.style.marginBottom = '0.75rem';
-            qEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong>Pregunta ${idx + 1}</strong>
-                    <span class="muted">${q.question}</span>
+    function renderQuestion(i) {
+        qWrapper.innerHTML = '';
+        const q = qs[i];
+
+        const qCard = document.createElement('div');
+        qCard.className = 'test-question card';
+        qCard.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div class="test-step">Pregunta ${i + 1} de ${qs.length}</div>
+                    <h3 style="margin-top:0.25rem;">${q.question}</h3>
                 </div>
-                <div class="test-options" style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
-            `;
+                <div style="min-width:80px; text-align:center; color:var(--text-muted);">Progreso<br><strong>${i + 1}/${qs.length}</strong></div>
+            </div>
+            <div class="test-options" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+        `;
 
-            const optsContainer = qEl.querySelector('.test-options');
-            q.options.forEach((opt, oi) => {
-                const btn = document.createElement('button');
-                btn.className = 'btn secondary';
-                btn.style.textAlign = 'left';
-                btn.textContent = opt.text;
-                btn.addEventListener('click', () => {
-                    if (answersState[idx]) return; // already answered
-                    answersState[idx] = { selected: oi, correct: !!opt.correct };
-                    btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
-                    btn.style.color = 'white';
-                    Array.from(optsContainer.children).forEach((c, ci) => {
-                        c.disabled = true;
-                        if (ci !== oi) c.style.opacity = '0.8';
-                    });
+        const optsContainer = qCard.querySelector('.test-options');
+        q.options.forEach((opt, oi) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn secondary';
+            btn.textContent = opt.text;
+            btn.style.textAlign = 'left';
+            if (answers[i] && answers[i].selected === oi) {
+                btn.style.backgroundColor = answers[i].correct ? '#16a34a' : '#ef4444';
+                btn.style.color = 'white';
+            }
+            btn.addEventListener('click', () => {
+                answers[i] = { selected: oi, correct: !!opt.correct };
+                // mark selection
+                Array.from(optsContainer.children).forEach((c, ci) => {
+                    c.disabled = true;
+                    c.style.opacity = '0.8';
                 });
-                optsContainer.appendChild(btn);
+                btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
+                btn.style.color = 'white';
+                // enable next button
+                nextBtn.disabled = false;
             });
-
-            form.appendChild(qEl);
+            optsContainer.appendChild(btn);
         });
+
+        qWrapper.appendChild(qCard);
+        // disable next if unanswered
+        nextBtn.disabled = !answers[i];
+        prevBtn.disabled = i === 0;
     }
 
-    // initial shuffle
-    localQuestions.forEach(q => shuffle(q.options));
-    shuffle(localQuestions);
-    renderQuestions();
+    // side panel content (progress circle + summary)
+    const progressWrap = document.createElement('div');
+    progressWrap.className = 'progress-circle';
+    progressWrap.innerHTML = `
+        <svg viewBox="0 0 140 140" role="img" aria-label="Resultado">
+            <circle class="bg" cx="70" cy="70" r="70"></circle>
+            <circle class="fg" cx="70" cy="70" r="70"></circle>
+        </svg>
+        <div class="progress-value">0%</div>
+    `;
 
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'btn primary';
-    submitBtn.textContent = 'Finalizar test';
-    submitBtn.style.marginTop = '0.75rem';
-    submitBtn.addEventListener('click', () => {
-        const answered = answersState.filter(Boolean);
-        const correctCount = answered.reduce((acc, a) => acc + (a.correct ? 1 : 0), 0);
-        const score = Math.round((correctCount / localQuestions.length) * 100);
-        elements.contentTitle.textContent = `Test — Resultado: ${correctCount}/${localQuestions.length} (${score}%)`;
-        if (onComplete) onComplete({ score, correctCount, total: localQuestions.length, questions: localQuestions });
+    const progressDesc = document.createElement('div');
+    progressDesc.className = 'progress-desc';
+    progressDesc.textContent = 'Resuelve las preguntas para ver tu resultado.';
+
+    side.appendChild(progressWrap);
+    side.appendChild(progressDesc);
+
+    // navigation buttons
+    const nav = document.createElement('div');
+    nav.className = 'test-nav';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn secondary';
+    prevBtn.textContent = 'Anterior';
+    prevBtn.disabled = true;
+    prevBtn.addEventListener('click', () => {
+        if (index > 0) {
+            index -= 1;
+            renderQuestion(index);
+        }
+    });
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn primary';
+    nextBtn.textContent = 'Siguiente';
+    nextBtn.disabled = true; // enabled when user answers
+    nextBtn.addEventListener('click', async () => {
+        if (index < qs.length - 1) {
+            index += 1;
+            renderQuestion(index);
+        } else {
+            // finalize
+            const answered = answers.filter(Boolean);
+            const correctCount = answered.reduce((acc, a) => acc + (a.correct ? 1 : 0), 0);
+            const total = qs.length;
+            const percent = Math.round((correctCount / total) * 100);
+
+            // animate progress circle
+            const fg = progressWrap.querySelector('circle.fg');
+            const circumference = 2 * Math.PI * 70;
+            const offset = circumference * (1 - percent / 100);
+            fg.style.strokeDasharray = circumference;
+            fg.style.strokeDashoffset = circumference; // start
+            // force reflow then animate
+            requestAnimationFrame(() => {
+                fg.style.strokeDashoffset = offset;
+            });
+
+            progressWrap.querySelector('.progress-value').textContent = `${percent}%`;
+
+            // descriptive sentence
+            let msg = '';
+            if (percent >= 85) msg = '¡Excelente! Has dominado este contenido.';
+            else if (percent >= 60) msg = 'Bien — buen entendimiento, repasa lo restante.';
+            else if (percent >= 35) msg = 'Necesitas practicar más en este tema.';
+            else msg = 'Recomendado revisar desde el inicio y repetir ejercicios.';
+
+            progressDesc.textContent = `${correctCount}/${total} correctas — ${msg}`;
+
+            elements.contentTitle.textContent = `Test — Resultado: ${percent}%`;
+
+            // callback to save session
+            if (onComplete) onComplete({ score: percent, correctCount, total, questions: qs });
+
+            // change nextBtn to allow finishing/closing
+            nextBtn.textContent = 'Hecho';
+            nextBtn.disabled = false;
+            nextBtn.removeEventListener('click', () => {});
+            nextBtn.addEventListener('click', () => {
+                // do nothing or scroll to top
+                elements.outputArea.scrollTop = 0;
+            });
+        }
     });
 
     const retryBtn = document.createElement('button');
     retryBtn.className = 'btn secondary';
-    retryBtn.textContent = 'Reintentar test';
-    retryBtn.style.marginLeft = '0.5rem';
-    retryBtn.style.marginTop = '0.75rem';
+    retryBtn.textContent = 'Reintentar';
     retryBtn.addEventListener('click', () => {
-        // reshuffle questions & options, reset state and re-render
-        localQuestions.forEach(q => shuffle(q.options));
-        shuffle(localQuestions);
+        // reshuffle questions & options, reset answers
+        qs.forEach(q => shuffle(q.options));
+        shuffle(qs);
+        index = 0;
+        for (let i = 0; i < answers.length; i++) answers[i] = null;
+        progressWrap.querySelector('.progress-value').textContent = `0%`;
+        const fg = progressWrap.querySelector('circle.fg');
+        fg.style.strokeDashoffset = 2 * Math.PI * 70;
+        progressDesc.textContent = 'Resuelve las preguntas para ver tu resultado.';
         elements.contentTitle.textContent = 'Test';
-        renderQuestions();
-        elements.outputArea.scrollTop = 0;
+        renderQuestion(index);
     });
 
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.gap = '0.5rem';
-    actions.appendChild(submitBtn);
-    actions.appendChild(retryBtn);
+    nav.appendChild(prevBtn);
+    nav.appendChild(nextBtn);
+    nav.appendChild(retryBtn);
 
-    container.appendChild(form);
-    container.appendChild(actions);
+    // assemble
+    qWrapper.appendChild(document.createElement('div')); // spacer
+    container.appendChild(qWrapper);
+    container.appendChild(side);
+    container.appendChild(nav);
+
     elements.outputArea.appendChild(container);
-    elements.contentTitle.textContent = 'Test';
+
+    // initial shuffle and render
+    qs.forEach(q => shuffle(q.options));
+    shuffle(qs);
+    renderQuestion(index);
+    elements.contentTitle.textContent = `Test — ${qs.length} preguntas`;
 }
+
 
 export function appendChatMessage(role, text) {
     const container = document.getElementById('chat-messages');

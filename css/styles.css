@@ -417,6 +417,71 @@ textarea:focus {
 .notebook-card .icon { font-size:1.3rem; background: #eef2ff; padding:0.45rem; border-radius:8px; }
 .notebook-card.new-notebook { justify-content:center; color:var(--primary-color); font-weight:600; }
 
+/* Test UI */
+.test-container {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1rem;
+    align-items: start;
+}
+
+.test-questions-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.test-question {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+}
+
+.test-options .btn {
+    width: 100%;
+    display: block;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+}
+
+.test-options .btn:hover { transform: translateY(-1px); }
+.test-options .btn:disabled { opacity: 0.85; cursor: default; }
+
+.test-side {
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(180deg, #ffffff, #fbfbff);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progress-circle {
+    width: 160px;
+    height: 160px;
+    display: grid;
+    place-items: center;
+}
+.progress-circle svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.progress-circle circle.bg { stroke: #f1f5f9; stroke-width: 12; fill: none; }
+.progress-circle circle.fg { stroke: var(--primary-color); stroke-width: 12; stroke-linecap: round; fill: none; stroke-dasharray: 440; stroke-dashoffset: 440; transition: stroke-dashoffset 900ms cubic-bezier(.22,.9,.32,1); }
+.progress-value { font-size: 1.5rem; font-weight: 700; }
+.progress-desc { text-align: center; color: var(--text-muted); padding: 0 0.5rem; }
+
+.test-actions { display:flex; gap:0.5rem; margin-top:0.5rem; }
+.test-nav { display:flex; gap:0.5rem; align-items:center; margin-top:0.75rem; }
+.test-step { font-weight:600; color:var(--text-muted); }
+
+@media (max-width: 900px) {
+    .test-container { grid-template-columns: 1fr; }
+    .test-side { order: 2; }
+}
+
 /* Loading State */
 .loading-state {
     position: absolute;
