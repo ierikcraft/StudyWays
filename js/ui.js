@@ -114,43 +114,63 @@ export function renderTest(questions, onComplete) {
     const form = document.createElement('div');
     form.className = 'test-questions';
 
-    const answersState = [];
+    // Work on a local deep-copy so retry/shuffle doesn't mutate original
+    const localQuestions = questions.map(q => ({
+        question: q.question,
+        options: q.options.map(o => ({ text: o.text, correct: !!o.correct }))
+    }));
 
-    questions.forEach((q, idx) => {
-        const qEl = document.createElement('div');
-        qEl.className = 'test-question card';
-        qEl.style.marginBottom = '0.75rem';
-        qEl.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong>Pregunta ${idx + 1}</strong>
-                <span class="muted">${q.question}</span>
-            </div>
-            <div class="test-options" style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
-        `;
+    let answersState = [];
 
-        const optsContainer = qEl.querySelector('.test-options');
-        q.options.forEach((opt, oi) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn secondary';
-            btn.style.textAlign = 'left';
-            btn.textContent = opt.text;
-            btn.addEventListener('click', () => {
-                // mark selected and show result
-                if (answersState[idx]) return; // already answered
-                answersState[idx] = { selected: oi, correct: !!opt.correct };
-                btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
-                btn.style.color = 'white';
-                // disable siblings
-                Array.from(optsContainer.children).forEach((c, ci) => {
-                    c.disabled = true;
-                    if (ci !== oi) c.style.opacity = '0.8';
+    const shuffle = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    };
+
+    function renderQuestions() {
+        form.innerHTML = '';
+        answersState = [];
+        localQuestions.forEach((q, idx) => {
+            const qEl = document.createElement('div');
+            qEl.className = 'test-question card';
+            qEl.style.marginBottom = '0.75rem';
+            qEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>Pregunta ${idx + 1}</strong>
+                    <span class="muted">${q.question}</span>
+                </div>
+                <div class="test-options" style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+            `;
+
+            const optsContainer = qEl.querySelector('.test-options');
+            q.options.forEach((opt, oi) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn secondary';
+                btn.style.textAlign = 'left';
+                btn.textContent = opt.text;
+                btn.addEventListener('click', () => {
+                    if (answersState[idx]) return; // already answered
+                    answersState[idx] = { selected: oi, correct: !!opt.correct };
+                    btn.style.backgroundColor = opt.correct ? '#16a34a' : '#ef4444';
+                    btn.style.color = 'white';
+                    Array.from(optsContainer.children).forEach((c, ci) => {
+                        c.disabled = true;
+                        if (ci !== oi) c.style.opacity = '0.8';
+                    });
                 });
+                optsContainer.appendChild(btn);
             });
-            optsContainer.appendChild(btn);
-        });
 
-        form.appendChild(qEl);
-    });
+            form.appendChild(qEl);
+        });
+    }
+
+    // initial shuffle
+    localQuestions.forEach(q => shuffle(q.options));
+    shuffle(localQuestions);
+    renderQuestions();
 
     const submitBtn = document.createElement('button');
     submitBtn.className = 'btn primary';
@@ -159,13 +179,33 @@ export function renderTest(questions, onComplete) {
     submitBtn.addEventListener('click', () => {
         const answered = answersState.filter(Boolean);
         const correctCount = answered.reduce((acc, a) => acc + (a.correct ? 1 : 0), 0);
-        const score = Math.round((correctCount / questions.length) * 100);
-        elements.contentTitle.textContent = `Test — Resultado: ${correctCount}/${questions.length} (${score}%)`;
-        if (onComplete) onComplete({ score, correctCount, total: questions.length, questions });
+        const score = Math.round((correctCount / localQuestions.length) * 100);
+        elements.contentTitle.textContent = `Test — Resultado: ${correctCount}/${localQuestions.length} (${score}%)`;
+        if (onComplete) onComplete({ score, correctCount, total: localQuestions.length, questions: localQuestions });
     });
 
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'btn secondary';
+    retryBtn.textContent = 'Reintentar test';
+    retryBtn.style.marginLeft = '0.5rem';
+    retryBtn.style.marginTop = '0.75rem';
+    retryBtn.addEventListener('click', () => {
+        // reshuffle questions & options, reset state and re-render
+        localQuestions.forEach(q => shuffle(q.options));
+        shuffle(localQuestions);
+        elements.contentTitle.textContent = 'Test';
+        renderQuestions();
+        elements.outputArea.scrollTop = 0;
+    });
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '0.5rem';
+    actions.appendChild(submitBtn);
+    actions.appendChild(retryBtn);
+
     container.appendChild(form);
-    container.appendChild(submitBtn);
+    container.appendChild(actions);
     elements.outputArea.appendChild(container);
     elements.contentTitle.textContent = 'Test';
 }
