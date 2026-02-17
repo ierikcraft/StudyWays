@@ -164,6 +164,33 @@ textarea {
     overflow-y: auto;
 }
 
+.exams-container {
+    margin-bottom: 1rem;
+}
+
+.exam-item {
+    padding: 0.5rem 0.65rem;
+    margin-bottom: 0.4rem;
+    background-color: transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.exam-item .exam-meta {
+    display:flex;
+    flex-direction:column;
+}
+
+.exam-selected {
+    background-color: #eef2ff; /* light indigo */
+    color: var(--text-main);
+}
+
 .history-item {
     padding: 0.75rem;
     margin-bottom: 0.5rem;

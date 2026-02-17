@@ -8,6 +8,17 @@ export const elements = {
     historyList: document.getElementById('history-list'),
     loadingIndicator: document.getElementById('loading'),
     contentTitle: document.getElementById('content-title'),
+
+    // Exams UI
+    examsList: document.getElementById('exams-list'),
+    btnCreateExam: document.getElementById('btn-create-exam'),
+    createExamModal: document.getElementById('create-exam-modal'),
+    closeCreateExam: document.getElementById('close-create-exam'),
+    saveExamBtn: document.getElementById('save-exam'),
+    cancelExamBtn: document.getElementById('cancel-exam'),
+    examEmojiInput: document.getElementById('exam-emoji'),
+    examTitleInput: document.getElementById('exam-title'),
+
     // Modal
     modal: document.getElementById('settings-modal'),
     closeModal: document.getElementById('close-modal'),
@@ -136,5 +147,50 @@ export function updateHistoryList(sessions, onDelete, onLoad) {
             onDelete(session.id);
         });
         elements.historyList.appendChild(el);
+    });
+}
+
+export function renderExamItem(exam, onSelect) {
+    const item = document.createElement('div');
+    item.className = 'exam-item';
+    item.dataset.id = exam.id;
+    item.innerHTML = `
+        <div style="font-size:1.1rem; width:28px; text-align:center;">${exam.emoji || '📘'}</div>
+        <div class="exam-meta">
+            <strong>${exam.title}</strong>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Creado: ${new Date(exam.createdAt || Date.now()).toLocaleDateString()}</div>
+        </div>
+        <button class="delete-exam" data-id="${exam.id}" style="margin-left:auto; opacity:0;">×</button>
+    `;
+
+    item.addEventListener('click', () => onSelect(exam));
+    item.querySelector('.delete-exam').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = e.currentTarget.dataset.id;
+        const confirmed = confirm('Eliminar examen y su historial?');
+        if (confirmed) onSelect({ ...exam, __delete: true });
+    });
+
+    item.addEventListener('mouseenter', () => item.querySelector('.delete-exam').style.opacity = '1');
+    item.addEventListener('mouseleave', () => item.querySelector('.delete-exam').style.opacity = '0');
+
+    return item;
+}
+
+export function updateExamsList(exams, onDeleteOrSelect, onSelect) {
+    elements.examsList.innerHTML = '';
+    exams.forEach(exam => {
+        const el = renderExamItem(exam, (e) => {
+            if (e.__delete) return onDeleteOrSelect('delete', exam.id);
+            onSelect(exam);
+        });
+        elements.examsList.appendChild(el);
+    });
+}
+
+export function markExamSelected(examId) {
+    Array.from(elements.examsList.children).forEach(child => {
+        if (child.dataset.id === String(examId)) child.classList.add('exam-selected');
+        else child.classList.remove('exam-selected');
     });
 }
