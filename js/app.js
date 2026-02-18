@@ -371,7 +371,7 @@ async function handleFlashcards() {
     ui.toggleLoading(true);
     try {
         const cards = await api.generateFlashcards(text, flashcardCount);
-        ui.renderFlashcards(cards);
+        ui.renderFlashcards(cards, (card) => explainFlashcard(text, card));
 
         await storage.saveSession(currentUser.id, currentExam.id, {
             type: 'flashcard',
@@ -385,6 +385,20 @@ async function handleFlashcards() {
     } finally {
         ui.toggleLoading(false);
     }
+}
+
+function explainFlashcard(text, card) {
+    currentContext = text;
+    chatHistory = [];
+    ui.renderChatInterface(handleChatMessage);
+    
+    // Automatically send a question about the flashcard
+    const question = `Explica me esta pregunta y respuesta:\n\nPregunta: ${card.question}\n\nRespuesta: ${card.answer}`;
+    
+    // Send the message after a small delay to ensure UI is ready
+    setTimeout(() => {
+        handleChatMessage(question);
+    }, 100);
 }
 
 function initializeChat() {
@@ -432,7 +446,7 @@ async function loadHistory() {
             if (session.type === 'summary') {
                 ui.renderSummary(session.content);
             } else if (session.type === 'flashcard') {
-                ui.renderFlashcards(session.content);
+                ui.renderFlashcards(session.content, (card) => explainFlashcard(session.originalText || ui.elements.inputArea.value, card));
             } else if (session.type === 'test') {
                 // show test in read-only review mode (allows "Volver a hacer" to start interactive)
                 const questions = session.content.questions || [];

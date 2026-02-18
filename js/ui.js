@@ -54,7 +54,7 @@ export function renderSummary(summary) {
     elements.contentTitle.textContent = 'Results: Resumen';
 }
 
-export function renderFlashcards(cards) {
+export function renderFlashcards(cards, onExplain) {
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'flashcards-carousel fade-in';
@@ -139,8 +139,10 @@ export function renderFlashcards(cards) {
     });
     
     explainBtn.addEventListener('click', () => {
-        const card = cards[currentIndex];
-        alert(`Pregunta: ${card.question}\n\nRespuesta: ${card.answer}`);
+        if (onExplain) {
+            const card = cards[currentIndex];
+            onExplain(card);
+        }
     });
     
     elements.contentTitle.textContent = '🗂️ Flashcards';
