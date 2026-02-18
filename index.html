@@ -99,14 +99,23 @@
                     <div class="input-header">
                         <h3>Texto de Entrada</h3>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="file" id="pdf-upload" accept=".pdf" class="hidden">
+                            <input type="file" id="pdf-upload" accept=".pdf" multiple class="hidden">
                             <button id="btn-upload-pdf" class="btn secondary"
                                 style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDF">
-                                📄 Subir PDF
+                                📄 Subir PDFs
                             </button>
                             <span id="char-count" class="text-muted">0 caracteres</span>
                         </div>
                     </div>
+                    
+                    <!-- PDFs Loaded Section -->
+                    <div id="pdfs-container" class="pdfs-container" style="display: none;">
+                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">PDFs Cargados</h4>
+                        <div id="pdfs-list" class="pdfs-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <!-- PDF items injected here -->
+                        </div>
+                    </div>
+                    
                     <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
                     <div class="action-buttons">
                         <button id="btn-summary" class="btn primary">

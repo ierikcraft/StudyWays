@@ -850,3 +850,49 @@ input[type="range"] {
 .hidden {
     display: none !important;
 }
+
+/* PDF List Styles */
+.pdfs-container {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background-color: rgba(99, 102, 241, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.pdfs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.pdf-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-remove-pdf {
+    padding: 0.25rem 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.btn-remove-pdf:hover {
+    color: var(--secondary-color);
+}

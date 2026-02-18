@@ -9,6 +9,7 @@ let chatHistory = [];
 let currentContext = '';
 let currentUser = null;
 let currentExam = null;
+let loadedPDFs = []; // Array to store loaded PDFs
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check Auth
@@ -43,14 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnUpload.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
+        const files = e.target.files;
+        if (files.length > 0) {
             ui.toggleLoading(true);
             try {
-                const text = await pdfUtils.extractTextFromPDF(file);
-                ui.elements.inputArea.value = text;
-                // Trigger input event to update char count
-                ui.elements.inputArea.dispatchEvent(new Event('input'));
+                for (let file of files) {
+                    const text = await pdfUtils.extractTextFromPDF(file);
+                    addPDFToList(file.name, text);
+                }
             } catch (error) {
                 alert('Error al leer el PDF: ' + error.message);
                 console.error(error);
@@ -452,4 +453,62 @@ async function loadHistory() {
             }
         }
     );
+}
+
+// PDF Management Functions
+function addPDFToList(filename, textContent) {
+    const id = Date.now() + Math.random();
+    loadedPDFs.push({
+        id,
+        name: filename,
+        text: textContent
+    });
+    updatePDFListUI();
+    updateTextAreaFromPDFs();
+}
+
+function removePDFFromList(id) {
+    loadedPDFs = loadedPDFs.filter(pdf => pdf.id !== id);
+    updatePDFListUI();
+    updateTextAreaFromPDFs();
+}
+
+function updateTextAreaFromPDFs() {
+    if (loadedPDFs.length > 0) {
+        const combinedText = loadedPDFs.map(pdf => pdf.text).join('\n\n--- Nueva página ---\n\n');
+        ui.elements.inputArea.value = combinedText;
+        ui.elements.inputArea.dispatchEvent(new Event('input'));
+    }
+}
+
+function updatePDFListUI() {
+    const container = document.getElementById('pdfs-container');
+    const list = document.getElementById('pdfs-list');
+    
+    if (loadedPDFs.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    list.innerHTML = loadedPDFs.map(pdf => `
+        <div class="pdf-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background-color: #ffffff; border-radius: var(--radius-sm); font-size: 0.85rem;">
+            <span style="flex: 1; word-break: break-word;">📄 ${escapeHtml(pdf.name)}</span>
+            <button class="btn-remove-pdf" data-pdf-id="${pdf.id}" style="padding: 0.25rem 0.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Eliminar PDF">✕</button>
+        </div>
+    `).join('');
+    
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.btn-remove-pdf').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const pdfId = parseInt(e.target.getAttribute('data-pdf-id'));
+            removePDFFromList(pdfId);
+        });
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
