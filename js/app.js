@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Main Actions
     ui.elements.actionSummary.addEventListener('click', handleSummary);
+    ui.elements.actionAudioSummary.addEventListener('click', handleAudioSummary);
     ui.elements.actionFlashcards.addEventListener('click', handleFlashcards);
     ui.elements.actionTest.addEventListener('click', handleTest);
     ui.elements.actionChat.addEventListener('click', initializeChat);
@@ -363,6 +364,29 @@ async function handleSummary() {
     }
 }
 
+async function handleAudioSummary() {
+    const text = ui.elements.inputArea.value.trim();
+    if (!text) return alert('Por favor ingresa un texto.');
+    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+
+    ui.toggleLoading(true);
+    try {
+        const audioSummary = await api.generateAudioSummary(text);
+        ui.renderAudioSummary(audioSummary);
+
+        await storage.saveSession(currentUser.id, currentExam.id, {
+            type: 'audio-summary',
+            content: audioSummary,
+            originalText: text
+        });
+        await loadHistory();
+    } catch (error) {
+        alert('Error al generar resumen de audio: ' + error.message);
+    } finally {
+        ui.toggleLoading(false);
+    }
+}
+
 async function handleFlashcards() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
@@ -445,6 +469,8 @@ async function loadHistory() {
             ui.elements.inputArea.value = session.originalText;
             if (session.type === 'summary') {
                 ui.renderSummary(session.content);
+            } else if (session.type === 'audio-summary') {
+                ui.renderAudioSummary(session.content);
             } else if (session.type === 'flashcard') {
                 ui.renderFlashcards(session.content, (card) => explainFlashcard(session.originalText || ui.elements.inputArea.value, card));
             } else if (session.type === 'test') {

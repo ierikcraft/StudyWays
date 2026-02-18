@@ -2,6 +2,7 @@ export const elements = {
     inputArea: document.getElementById('input-text'),
     outputArea: document.getElementById('output-content'),
     actionSummary: document.getElementById('btn-summary'),
+    actionAudioSummary: document.getElementById('btn-audio-summary'),
     actionFlashcards: document.getElementById('btn-flashcards'),
     actionTest: document.getElementById('btn-test'),
     actionChat: document.getElementById('btn-chat'),
@@ -52,6 +53,81 @@ export function renderSummary(summary) {
         </div>
     `;
     elements.contentTitle.textContent = 'Results: Resumen';
+}
+
+export function renderAudioSummary(summaryText) {
+    elements.outputArea.innerHTML = `
+        <div class="audio-summary-content fade-in">
+            <div class="audio-controls">
+                <button id="btn-play-audio" class="btn primary" style="gap: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                    🔊 Reproducir Audio
+                </button>
+                <button id="btn-pause-audio" class="btn secondary" style="gap: 0.5rem; display: flex; align-items: center; justify-content: center; display: none;">
+                    ⏸️ Pausar
+                </button>
+                <button id="btn-stop-audio" class="btn secondary" style="gap: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                    ⏹️ Detener
+                </button>
+            </div>
+            <div class="audio-text-display" style="margin-top: 1.5rem; padding: 1rem; background-color: var(--background-color); border-radius: var(--radius-md); font-size: 1rem; line-height: 1.6;">
+                ${escapeHtml(summaryText)}
+            </div>
+        </div>
+    `;
+    elements.contentTitle.textContent = '🔊 Resumen de Audio';
+    
+    setupAudioControls(summaryText);
+}
+
+function setupAudioControls(summaryText) {
+    const playBtn = document.getElementById('btn-play-audio');
+    const pauseBtn = document.getElementById('btn-pause-audio');
+    const stopBtn = document.getElementById('btn-stop-audio');
+    
+    let isSpeaking = false;
+    
+    playBtn.addEventListener('click', () => {
+        if ('speechSynthesis' in window) {
+            if (isSpeaking) {
+                window.speechSynthesis.resume();
+                playBtn.style.display = 'none';
+                pauseBtn.style.display = 'flex';
+            } else {
+                const utterance = new SpeechSynthesisUtterance(summaryText);
+                utterance.lang = 'es-ES';
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    playBtn.style.display = 'flex';
+                    pauseBtn.style.display = 'none';
+                };
+                
+                window.speechSynthesis.speak(utterance);
+                isSpeaking = true;
+                playBtn.style.display = 'none';
+                pauseBtn.style.display = 'flex';
+            }
+        } else {
+            alert('Tu navegador no soporta síntesis de voz.');
+        }
+    });
+    
+    pauseBtn.addEventListener('click', () => {
+        if (isSpeaking) {
+            window.speechSynthesis.pause();
+            pauseBtn.style.display = 'none';
+            playBtn.style.display = 'flex';
+        }
+    });
+    
+    stopBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        playBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
+    });
 }
 
 export function renderFlashcards(cards, onExplain) {
@@ -446,6 +522,7 @@ export function renderHistoryItem(session, onClick) {
     const date = new Date(session.date).toLocaleDateString();
     let typeLabel = '📄 Archivo';
     if (session.type === 'summary') typeLabel = '📝 Resumen';
+    if (session.type === 'audio-summary') typeLabel = '🔊 Audio';
     if (session.type === 'flashcard') typeLabel = '🗂️ Flashcards';
     if (session.type === 'chat') typeLabel = '💬 Chat';
     if (session.type === 'test') typeLabel = '🧪 Test';
@@ -454,7 +531,9 @@ export function renderHistoryItem(session, onClick) {
         ? `${(session.content || []).length || 0} tarjetas`
         : session.type === 'test'
             ? `${session.content && session.content.score ? session.content.score + '% — ' + (session.content.correctCount || 0) + '/' + (session.content.total || session.content.questions?.length || '?') : (session.meta && session.meta.count ? session.meta.count + ' preguntas' : session.originalText.substring(0, 30) + '...')}`
-            : session.originalText ? session.originalText.substring(0, 30) + '...' : '';
+            : session.type === 'audio-summary'
+                ? (session.content ? session.content.substring(0, 50) + '...' : '')
+                : session.originalText ? session.originalText.substring(0, 30) + '...' : '';
 
     item.innerHTML = `
         <div class="history-info">

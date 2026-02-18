@@ -3,6 +3,14 @@ const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
+const SYSTEM_PROMPT_AUDIO_SUMMARY = `You are a helpful study assistant. Create a concise, spoken-friendly summary of the provided text. The summary should:
+- Be 2-4 sentences maximum
+- Use simple, conversational language
+- Sound natural when read aloud
+- Avoid complex formatting or special characters
+- Focus on the key points only
+Just provide the summary text, nothing else.`;
+
 const SYSTEM_PROMPT_FLASHCARDS = (count) => `You are a helpful study assistant. Your task is to generate exactly ${count} flashcards from the provided text.
 The output format MUST be strictly:
 P: [Question]
@@ -52,6 +60,14 @@ async function callGroq(messages) {
 export async function generateSummary(text) {
     const messages = [
         { role: 'system', content: SYSTEM_PROMPT_SUMMARY },
+        { role: 'user', content: text }
+    ];
+    return await callGroq(messages);
+}
+
+export async function generateAudioSummary(text) {
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT_AUDIO_SUMMARY },
         { role: 'user', content: text }
     ];
     return await callGroq(messages);
