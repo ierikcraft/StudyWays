@@ -57,29 +57,99 @@ export function renderSummary(summary) {
 export function renderFlashcards(cards) {
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
-    container.className = 'flashcards-grid fade-in';
-
-    cards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'flashcard';
-        cardEl.innerHTML = `
+    container.className = 'flashcards-carousel fade-in';
+    
+    let currentIndex = 0;
+    
+    const carouselHTML = `
+        <div class="flashcards-carousel-wrapper">
+            <div class="flashcards-nav-top">
+                <button id="flashcard-prev" class="flashcard-nav-btn" title="Anterior">
+                    ←
+                </button>
+                <div class="flashcards-progress">
+                    <span id="flashcard-current">1</span> / <span id="flashcard-total">${cards.length}</span> tarjetas
+                </div>
+                <button id="flashcard-next" class="flashcard-nav-btn" title="Siguiente">
+                    →
+                </button>
+            </div>
+            
+            <div id="flashcard-display" class="flashcard-display">
+                <div class="flashcard-inner">
+                    <div class="flashcard-front">
+                        <p>${escapeHtml(cards[0].question)}</p>
+                    </div>
+                    <div class="flashcard-back">
+                        <p>${escapeHtml(cards[0].answer)}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flashcard-actions">
+                <button id="flashcard-explain" class="btn secondary" style="gap: 0.5rem;">
+                    📖 Explica
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = carouselHTML;
+    elements.outputArea.appendChild(container);
+    
+    const displayCard = document.getElementById('flashcard-display');
+    const currentSpan = document.getElementById('flashcard-current');
+    const prevBtn = document.getElementById('flashcard-prev');
+    const nextBtn = document.getElementById('flashcard-next');
+    const explainBtn = document.getElementById('flashcard-explain');
+    
+    function updateCard() {
+        const card = cards[currentIndex];
+        displayCard.innerHTML = `
             <div class="flashcard-inner">
                 <div class="flashcard-front">
-                    <p>${card.question}</p>
+                    <p>${escapeHtml(card.question)}</p>
                 </div>
                 <div class="flashcard-back">
-                    <p>${card.answer}</p>
+                    <p>${escapeHtml(card.answer)}</p>
                 </div>
             </div>
         `;
-        cardEl.addEventListener('click', () => {
-            cardEl.classList.toggle('flipped');
+        currentSpan.textContent = currentIndex + 1;
+        displayCard.classList.remove('flipped');
+        
+        // Re-attach click listener for flip
+        displayCard.addEventListener('click', () => {
+            displayCard.classList.toggle('flipped');
         });
-        container.appendChild(cardEl);
+    }
+    
+    displayCard.addEventListener('click', () => {
+        displayCard.classList.toggle('flipped');
     });
+    
+    prevBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + cards.length) % cards.length;
+        updateCard();
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % cards.length;
+        updateCard();
+    });
+    
+    explainBtn.addEventListener('click', () => {
+        const card = cards[currentIndex];
+        alert(`Pregunta: ${card.question}\n\nRespuesta: ${card.answer}`);
+    });
+    
+    elements.contentTitle.textContent = '🗂️ Flashcards';
+}
 
-    elements.outputArea.appendChild(container);
-    elements.contentTitle.textContent = 'Results: Flashcards';
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 export function renderChatInterface(onSend) {
