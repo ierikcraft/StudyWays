@@ -40,8 +40,7 @@ async function callGroq(messages) {
             body: JSON.stringify({
                 model: 'llama-3.1-8b-instant', // Using a fast model supported by Groq
                 messages: messages,
-                temperature: 0.5,
-                max_tokens: 1024
+                temperature: 0.5
             })
         });
 
