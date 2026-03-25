@@ -1,4 +1,4 @@
-const API_KEY = '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'; // Hardcoded as per request
+const API_KEY = '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'; // Hardcoded as per request
 const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
