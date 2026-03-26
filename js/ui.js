@@ -427,12 +427,41 @@ export function renderTest(questions, onComplete, opts = {}) {
             // update simple progress UI
             progressValueEl.textContent = `${percent}%`;
 
+            const successPhrases = [
+                '¡Muy bien campeón!',
+                '¡Excelente trabajo!',
+                '¡Lo hiciste genial!',
+                '¡Sigue así, vas por buen camino!',
+                '¡Qué gran resultado!',
+                '¡Eres un genio!',
+                '¡Impresionante!',
+                '¡Dominas este tema!',
+                '¡Fantástico esfuerzo!',
+                '¡Bravo, sigue brillando!'
+            ];
+
+            const failPhrases = [
+                'Tú puedes, ¡a la próxima!',
+                '¡No te rindas, sigue practicando!',
+                'De los errores se aprende, ¡ánimo!',
+                'Estás cerca, ¡inténtalo de nuevo!',
+                '¡Cada intento te hace más sabio!',
+                'No pasa nada, ¡a repasarlo!',
+                '¡Toma aire y vuelve a intentarlo!',
+                'Un pequeño tropiezo, ¡tú puedes con esto!',
+                'Poco a poco, ¡lo vas a lograr!',
+                'El éxito requiere tiempo, ¡sigue adelante!'
+            ];
+
             // descriptive sentence
             let msg = '';
-            if (percent >= 85) msg = '¡Excelente! Has dominado este contenido.';
-            else if (percent >= 60) msg = 'Bien — buen entendimiento, repasa lo restante.';
-            else if (percent >= 35) msg = 'Necesitas practicar más en este tema.';
-            else msg = 'Recomendado revisar desde el inicio y repetir ejercicios.';
+            const randomMsg = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+            if (percent >= 50) {
+                msg = randomMsg(successPhrases);
+            } else {
+                msg = randomMsg(failPhrases);
+            }
 
             progressDescEl.textContent = `${correctCount}/${total} correctas — ${msg}`;
             elements.contentTitle.textContent = `Test — Resultado: ${percent}%`;
