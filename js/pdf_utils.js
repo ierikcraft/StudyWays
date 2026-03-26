@@ -22,3 +22,22 @@ export async function extractTextFromPDF(file) {
         reader.readAsArrayBuffer(file);
     });
 }
+
+export function base64ToBlob(base64, mimeType = 'application/pdf') {
+    const raw = window.atob(base64.split(',')[1]);
+    const rawLength = raw.length;
+    const array = new Uint8Array(new ArrayBuffer(rawLength));
+    for (let i = 0; i < rawLength; i++) {
+        array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([array], { type: mimeType });
+}
+
+export function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}

@@ -50,8 +50,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.toggleLoading(true);
             try {
                 for (let file of files) {
+                    const base64 = await pdfUtils.fileToBase64(file);
                     const text = await pdfUtils.extractTextFromPDF(file);
-                    addPDFToList(file.name, text);
+                    
+                    let fakeId = Date.now() + Math.random();
+                    if (currentExam && !currentExam.isLocal) {
+                        try {
+                            const result = await storage.savePdfToExam(currentUser.id, currentExam.id, file.name, base64);
+                            if (result) {
+                                fakeId = result.id;
+                            }
+                        } catch (err) {
+                            console.error("Cloud save failed for PDF", err);
+                        }
+                    }
+                    addPDFToList(file.name, text, fakeId);
                 }
             } catch (error) {
                 alert('Error al leer el PDF: ' + error.message);
@@ -184,10 +197,32 @@ async function refreshExamsList() {
     ui.markExamSelected(currentExam ? currentExam.id : null);
 }
 
-function selectExam(exam) {
+async function selectExam(exam) {
     currentExam = exam;
     ui.markExamSelected(exam.id);
     loadHistory();
+    
+    loadedPDFs = [];
+    ui.elements.inputArea.value = '';
+    updatePDFListUI();
+    ui.elements.inputArea.dispatchEvent(new Event('input'));
+    
+    if (exam && !exam.isLocal) {
+        ui.toggleLoading(true);
+        try {
+            const pdfs = await storage.loadPdfsForExam(currentUser.id, exam.id);
+            for (let p of pdfs) {
+                const blob = pdfUtils.base64ToBlob(p.value, 'application/pdf');
+                const file = new File([blob], p.name, { type: 'application/pdf' });
+                const text = await pdfUtils.extractTextFromPDF(file);
+                addPDFToList(p.name, text, p.id);
+            }
+        } catch (err) {
+            console.error("Error loading PDFs for exam", err);
+        } finally {
+            ui.toggleLoading(false);
+        }
+    }
 }
 
 function openCreateExamModal() {
@@ -501,21 +536,31 @@ async function loadHistory() {
 }
 
 // PDF Management Functions
-function addPDFToList(filename, textContent) {
-    const id = Date.now() + Math.random();
-    loadedPDFs.push({
-        id,
-        name: filename,
-        text: textContent
-    });
-    updatePDFListUI();
-    updateTextAreaFromPDFs();
+function addPDFToList(filename, textContent, providedId) {
+    const id = providedId || (Date.now() + Math.random());
+    if (!loadedPDFs.find(p => p.id === id)) {
+        loadedPDFs.push({
+            id,
+            name: filename,
+            text: textContent
+        });
+        updatePDFListUI();
+        updateTextAreaFromPDFs();
+    }
 }
 
-function removePDFFromList(id) {
-    loadedPDFs = loadedPDFs.filter(pdf => pdf.id !== id);
+async function removePDFFromList(id) {
+    loadedPDFs = loadedPDFs.filter(pdf => String(pdf.id) !== String(id));
     updatePDFListUI();
     updateTextAreaFromPDFs();
+    
+    if (currentUser && currentExam && !currentExam.isLocal) {
+        try {
+            await storage.removePdfFromExam(currentUser.id, currentExam.id, id);
+        } catch (err) {
+            console.error("Failed to remove PDF from cloud", err);
+        }
+    }
 }
 
 function updateTextAreaFromPDFs() {
@@ -546,7 +591,8 @@ function updatePDFListUI() {
     // Add event listeners to delete buttons
     document.querySelectorAll('.btn-remove-pdf').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const pdfId = parseInt(e.target.getAttribute('data-pdf-id'));
+            const btnEl = e.target.closest('.btn-remove-pdf');
+            const pdfId = btnEl.getAttribute('data-pdf-id');
             removePDFFromList(pdfId);
         });
     });
