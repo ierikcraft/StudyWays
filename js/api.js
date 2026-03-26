@@ -45,7 +45,9 @@ async function callGroq(messages) {
         });
 
         if (!response.ok) {
-            throw new Error(`API Error: ${response.statusText}`);
+            const errData = await response.json().catch(() => null);
+            const errDetails = errData ? JSON.stringify(errData) : response.statusText;
+            throw new Error(`API Error ${response.status}: ${errDetails}`);
         }
 
         const data = await response.json();
@@ -118,8 +120,7 @@ function parseTest(text) {
 
 export async function chatWithContext(context, question, history = []) {
     const messages = [
-        { role: 'system', content: SYSTEM_PROMPT_CHAT },
-        { role: 'user', content: `Context:\n${context}` },
+        { role: 'system', content: `${SYSTEM_PROMPT_CHAT}\n\nContext:\n${context}` },
         ...history,
         { role: 'user', content: question }
     ];

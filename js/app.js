@@ -306,6 +306,7 @@ function updateCharCount(e) {
 async function handleTest() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para generar el test.');
+    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     // show modal to pick number of questions (replaces prompt())
@@ -344,6 +345,7 @@ function saveSettings() {
 async function handleSummary() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
+    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -367,6 +369,7 @@ async function handleSummary() {
 async function handleAudioSummary() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
+    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -390,6 +393,7 @@ async function handleAudioSummary() {
 async function handleFlashcards() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
+    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -428,6 +432,7 @@ function explainFlashcard(text, card) {
 function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
+    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
 
     currentContext = text;
     chatHistory = []; // Reset history on new chat start
@@ -446,7 +451,7 @@ async function handleChatMessage(message) {
         chatHistory.push({ role: 'user', content: message });
         chatHistory.push({ role: 'assistant', content: response });
     } catch (error) {
-        ui.appendChatMessage('ai', 'Error: No pude conectar con el servicio.');
+        ui.appendChatMessage('ai', 'Error: ' + error.message);
         console.error(error);
     }
 }
