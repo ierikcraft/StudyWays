@@ -17,12 +17,12 @@
 </head>
 
 <body>
-    
+
     <!-- Si se experimentan problemas descomentas esta linea -->
     <!-- <div class="site-alert" role="alert">StudyWays está experimentando problemas</div> -->
-    
-    
-    
+
+
+
     <!-- Landing Page -->
     <div id="landing-page" class="landing-container">
         <div class="landing-content fade-in-up">
@@ -66,7 +66,8 @@
             <div class="exams-container">
                 <h3 style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
                     <span>Exámenes</span>
-                    <button id="btn-create-exam" class="btn secondary" title="Crear examen" style="font-size:0.85rem; padding:0.25rem 0.6rem;">➕ Nuevo</button>
+                    <button id="btn-create-exam" class="btn secondary" title="Crear examen"
+                        style="font-size:0.85rem; padding:0.25rem 0.6rem;">➕ Nuevo</button>
                 </h3>
                 <div id="exams-list" class="history-list">
                     <!-- Exams will be injected here -->
@@ -107,15 +108,17 @@
                             <span id="char-count" class="text-muted">0 caracteres</span>
                         </div>
                     </div>
-                    
+
                     <!-- PDFs Loaded Section -->
                     <div id="pdfs-container" class="pdfs-container" style="display: none;">
-                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">PDFs Cargados</h4>
-                        <div id="pdfs-list" class="pdfs-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">PDFs
+                            Cargados</h4>
+                        <div id="pdfs-list" class="pdfs-list"
+                            style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
                             <!-- PDF items injected here -->
                         </div>
                     </div>
-                    
+
                     <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
                     <div class="action-buttons">
                         <button id="btn-summary" class="btn primary">
@@ -189,10 +192,12 @@
             </div>
             <div class="modal-body">
                 <label for="exam-emoji">Emoji (ej. 📘)</label>
-                <input id="exam-emoji" type="text" maxlength="2" placeholder="📘" style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                <input id="exam-emoji" type="text" maxlength="2" placeholder="📘"
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
 
                 <label for="exam-title" style="margin-top:0.75rem; display:block;">Título</label>
-                <input id="exam-title" type="text" placeholder="Nombre del examen" style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                <input id="exam-title" type="text" placeholder="Nombre del examen"
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
 
                 <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
                     <button id="save-exam" class="btn primary">Crear</button>
@@ -211,7 +216,8 @@
             </div>
             <div class="modal-body">
                 <label for="test-count-input">Número de preguntas (1-50)</label>
-                <input id="test-count-input" type="number" min="1" max="50" value="5" style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                <input id="test-count-input" type="number" min="1" max="50" value="5"
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
                 <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
                     <button id="start-test" class="btn primary">Comenzar</button>
                     <button id="cancel-test" class="btn secondary">Cancelar</button>
