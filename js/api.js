@@ -38,7 +38,7 @@ async function callGroq(messages) {
                 'Authorization': `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-                model: 'llama-3.1-8b-instant', // Using a fast model supported by Groq
+                model: 'llama-3.3-70b-versatile', // Using a fast model supported by Groq
                 messages: messages,
                 temperature: 0.5
             })
