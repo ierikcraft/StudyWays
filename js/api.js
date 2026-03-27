@@ -1,7 +1,7 @@
 // js/api.js
 
 // 1. PEGA AQUÍ TU CLAVE DE SAMBANOVA
-const API_KEY = '093a150f-94b9-48c0-98f6-9ec0764c807f'; 
+const API_KEY = '093a150f-94b9-48c0-98f6-9ec0764c807f';
 
 // URL de SambaNova (idéntica a la estructura de Groq/OpenAI)
 const BASE_URL = 'https://api.sambanova.ai/v1/chat/completions';
@@ -152,7 +152,7 @@ function parseTest(text) {
                 }
             }
             questions.push(q);
-            i += 4; 
+            i += 4;
         } else {
             i++;
         }

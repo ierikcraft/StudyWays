@@ -75,7 +75,7 @@ export function renderAudioSummary(summaryText) {
         </div>
     `;
     elements.contentTitle.textContent = '🔊 Resumen de Audio';
-    
+
     setupAudioControls(summaryText);
 }
 
@@ -83,9 +83,9 @@ function setupAudioControls(summaryText) {
     const playBtn = document.getElementById('btn-play-audio');
     const pauseBtn = document.getElementById('btn-pause-audio');
     const stopBtn = document.getElementById('btn-stop-audio');
-    
+
     let isSpeaking = false;
-    
+
     playBtn.addEventListener('click', () => {
         if ('speechSynthesis' in window) {
             if (isSpeaking) {
@@ -97,13 +97,13 @@ function setupAudioControls(summaryText) {
                 utterance.lang = 'es-ES';
                 utterance.rate = 0.9;
                 utterance.pitch = 1;
-                
+
                 utterance.onend = () => {
                     isSpeaking = false;
                     playBtn.style.display = 'flex';
                     pauseBtn.style.display = 'none';
                 };
-                
+
                 window.speechSynthesis.speak(utterance);
                 isSpeaking = true;
                 playBtn.style.display = 'none';
@@ -113,7 +113,7 @@ function setupAudioControls(summaryText) {
             alert('Tu navegador no soporta síntesis de voz.');
         }
     });
-    
+
     pauseBtn.addEventListener('click', () => {
         if (isSpeaking) {
             window.speechSynthesis.pause();
@@ -121,7 +121,7 @@ function setupAudioControls(summaryText) {
             playBtn.style.display = 'flex';
         }
     });
-    
+
     stopBtn.addEventListener('click', () => {
         window.speechSynthesis.cancel();
         isSpeaking = false;
@@ -134,9 +134,9 @@ export function renderFlashcards(cards, onExplain) {
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'flashcards-carousel fade-in';
-    
+
     let currentIndex = 0;
-    
+
     const carouselHTML = `
         <div class="flashcards-carousel-wrapper">
             <div class="flashcards-nav-top">
@@ -169,16 +169,16 @@ export function renderFlashcards(cards, onExplain) {
             </div>
         </div>
     `;
-    
+
     container.innerHTML = carouselHTML;
     elements.outputArea.appendChild(container);
-    
+
     const displayCard = document.getElementById('flashcard-display');
     const currentSpan = document.getElementById('flashcard-current');
     const prevBtn = document.getElementById('flashcard-prev');
     const nextBtn = document.getElementById('flashcard-next');
     const explainBtn = document.getElementById('flashcard-explain');
-    
+
     function updateCard() {
         const card = cards[currentIndex];
         displayCard.innerHTML = `
@@ -193,34 +193,34 @@ export function renderFlashcards(cards, onExplain) {
         `;
         currentSpan.textContent = currentIndex + 1;
         displayCard.classList.remove('flipped');
-        
+
         // Re-attach click listener for flip
         displayCard.addEventListener('click', () => {
             displayCard.classList.toggle('flipped');
         });
     }
-    
+
     displayCard.addEventListener('click', () => {
         displayCard.classList.toggle('flipped');
     });
-    
+
     prevBtn.addEventListener('click', () => {
         currentIndex = (currentIndex - 1 + cards.length) % cards.length;
         updateCard();
     });
-    
+
     nextBtn.addEventListener('click', () => {
         currentIndex = (currentIndex + 1) % cards.length;
         updateCard();
     });
-    
+
     explainBtn.addEventListener('click', () => {
         if (onExplain) {
             const card = cards[currentIndex];
             onExplain(card);
         }
     });
-    
+
     elements.contentTitle.textContent = '🗂️ Flashcards';
 }
 
@@ -504,7 +504,7 @@ export function renderTest(questions, onComplete, opts = {}) {
             // change nextBtn to allow finishing/closing
             nextBtn.textContent = 'Hecho';
             nextBtn.disabled = false;
-            nextBtn.removeEventListener('click', () => {});
+            nextBtn.removeEventListener('click', () => { });
             nextBtn.addEventListener('click', () => {
                 elements.outputArea.scrollTop = 0;
             });
@@ -516,7 +516,7 @@ export function renderTest(questions, onComplete, opts = {}) {
                 expertBtn.style.borderColor = '#8b5cf6';
                 expertBtn.innerHTML = '💡 Consejo del Experto';
                 expertBtn.addEventListener('click', () => {
-                   opts.onExpertAdvice(qs, answers, qWrapper, expertBtn); 
+                    opts.onExpertAdvice(qs, answers, qWrapper, expertBtn);
                 });
                 nav.insertBefore(expertBtn, nextBtn);
             }

@@ -14,7 +14,7 @@ function writeLocalExams(uid, arr) { localStorage.setItem(examsKey(uid), JSON.st
 export async function listExams(uid) {
     ensureArg(uid, 'uid');
     const localExams = readLocalExams(uid).map(e => ({ ...e, isLocal: true }));
-    
+
     let fbExams = [];
     try {
         const snapshot = await get(ref(db, `users/${uid}/exams`));
@@ -25,7 +25,7 @@ export async function listExams(uid) {
     } catch (err) {
         console.error("Error fetching exams from Firebase:", err);
     }
-    
+
     const combined = [...localExams, ...fbExams];
     combined.sort((a, b) => b.createdAt - a.createdAt);
     return combined;
@@ -33,22 +33,22 @@ export async function listExams(uid) {
 
 export async function createExam(uid, { emoji = '📘', title = 'Nuevo examen' } = {}) {
     ensureArg(uid, 'uid');
-    
+
     // Write exclusively to Firebase
     const newExamRef = push(ref(db, `users/${uid}/exams`));
     const examData = { emoji, title, createdAt: Date.now() };
     await set(newExamRef, examData);
-    
+
     return { id: newExamRef.key, ...examData, isLocal: false };
 }
 
 export async function deleteExam(uid, examId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const exams = readLocalExams(uid);
     const localExam = exams.find(e => String(e.id) === String(examId));
-    
+
     if (localExam) {
         // Delete local
         const filtered = exams.filter(e => String(e.id) !== String(examId));
@@ -64,9 +64,9 @@ export async function deleteExam(uid, examId) {
 export async function saveSession(uid, examId, data) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
-    
+
     const id = String(Date.now());
     const session = { id, date: new Date().toISOString(), ...data };
 
@@ -81,16 +81,16 @@ export async function saveSession(uid, examId, data) {
         await set(newSessionRef, session);
         session.id = newSessionRef.key;
     }
-    
+
     return session;
 }
 
 export async function loadSessions(uid, examId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
-    
+
     let localSessions = [];
     if (isLocal) {
         const raw = localStorage.getItem(sessionsKey(uid, examId));
@@ -99,7 +99,7 @@ export async function loadSessions(uid, examId) {
             localSessions = Object.entries(obj).map(([id, s]) => ({ id, ...s, isLocal: true }));
         }
     }
-    
+
     let fbSessions = [];
     if (!isLocal) {
         try {
@@ -112,7 +112,7 @@ export async function loadSessions(uid, examId) {
             console.error("Error fetching sessions from Firebase:", err);
         }
     }
-    
+
     const combined = [...localSessions, ...fbSessions];
     combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return combined;
@@ -122,9 +122,9 @@ export async function deleteSession(uid, examId, sessionId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
     ensureArg(sessionId, 'sessionId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
-    
+
     if (isLocal) {
         const key = sessionsKey(uid, examId);
         const raw = localStorage.getItem(key);
@@ -141,7 +141,7 @@ export async function deleteSession(uid, examId, sessionId) {
 export async function clearHistory(uid, examId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
     if (isLocal) {
         localStorage.removeItem(sessionsKey(uid, examId));
@@ -154,7 +154,7 @@ export async function deleteAllExams(uid) {
     ensureArg(uid, 'uid');
     const exams = readLocalExams(uid);
     for (const e of exams) {
-        try { localStorage.removeItem(sessionsKey(uid, e.id)); } catch (_) {}
+        try { localStorage.removeItem(sessionsKey(uid, e.id)); } catch (_) { }
     }
     localStorage.removeItem(examsKey(uid));
 }
@@ -162,27 +162,27 @@ export async function deleteAllExams(uid) {
 export async function savePdfToExam(uid, examId, pdfName, base64) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
     if (isLocal) {
         console.warn("Saving PDF to local exam might exceed localStorage quota.");
         return null;
     }
-    
+
     const newPdfRef = push(ref(db, `users/${uid}/exams/${examId}/pdfs`));
     const pdfData = { name: pdfName, value: base64, createdAt: Date.now() };
     await set(newPdfRef, pdfData);
-    
+
     return { id: newPdfRef.key, ...pdfData };
 }
 
 export async function loadPdfsForExam(uid, examId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
     if (isLocal) return [];
-    
+
     let pdfs = [];
     try {
         const snapshot = await get(ref(db, `users/${uid}/exams/${examId}/pdfs`));
@@ -200,9 +200,9 @@ export async function removePdfFromExam(uid, examId, pdfId) {
     ensureArg(uid, 'uid');
     ensureArg(examId, 'examId');
     ensureArg(pdfId, 'pdfId');
-    
+
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
     if (isLocal) return;
-    
+
     await remove(ref(db, `users/${uid}/exams/${examId}/pdfs/${pdfId}`));
 }
