@@ -1,8 +1,12 @@
 // js/api.js
 
-const API_KEY = '093a150f-94b9-48c0-98f6-9ec0764c807f'; // Tu clave de SambaNova
+// 1. PEGA AQUÍ TU CLAVE DE SAMBANOVA
+const API_KEY = '093a150f-94b9-48c0-98f6-9ec0764c807f'; 
+
+// URL de SambaNova (idéntica a la estructura de Groq/OpenAI)
 const BASE_URL = 'https://api.sambanova.ai/v1/chat/completions';
 
+// --- TUS PROMPTS ORIGINALES INTACTOS ---
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
 const SYSTEM_PROMPT_AUDIO_SUMMARY = `You are a helpful study assistant. Create a concise, spoken-friendly summary of the provided text. The summary should:
@@ -33,10 +37,8 @@ Repeat for every question. Do NOT include explanations or headers.`;
 
 /**
  * Llama a la API de SambaNova.
- * @param {Array} messages - Array de objetos de mensaje.
- * @returns {Promise<string>} - El contenido de la respuesta.
  */
-async function callSambaNova(messages) {
+async function callAI(messages) {
     try {
         const response = await fetch(BASE_URL, {
             method: 'POST',
@@ -45,8 +47,8 @@ async function callSambaNova(messages) {
                 'Authorization': `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-                // Utilizamos el modelo Llama 3.1 70B de SambaNova, que es súper rápido e inteligente
-                model: 'Meta-Llama-3.1-70B-Instruct', 
+                // Usamos Llama 3.1 70B, rapidísimo y con memoria gigante para tus PDFs
+                model: 'Meta-Llama-3.1-70B-Instruct',
                 messages: messages,
                 temperature: 0.5
             })
@@ -61,17 +63,19 @@ async function callSambaNova(messages) {
         const data = await response.json();
         return data.choices[0]?.message?.content || '';
     } catch (error) {
-        console.error('SambaNova API Call Failed:', error);
+        console.error('API Call Failed:', error);
         throw error;
     }
 }
+
+// --- TUS FUNCIONES PRINCIPALES ---
 
 export async function generateSummary(text) {
     const messages = [
         { role: 'system', content: SYSTEM_PROMPT_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callSambaNova(messages);
+    return await callAI(messages);
 }
 
 export async function generateAudioSummary(text) {
@@ -79,7 +83,7 @@ export async function generateAudioSummary(text) {
         { role: 'system', content: SYSTEM_PROMPT_AUDIO_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callSambaNova(messages);
+    return await callAI(messages);
 }
 
 export async function generateFlashcards(text, count = 5) {
@@ -87,7 +91,7 @@ export async function generateFlashcards(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callSambaNova(messages);
+    const rawOutput = await callAI(messages);
     return parseFlashcards(rawOutput);
 }
 
@@ -96,9 +100,20 @@ export async function generateTest(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_TEST(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callSambaNova(messages);
+    const rawOutput = await callAI(messages);
     return parseTest(rawOutput);
 }
+
+export async function chatWithContext(context, question, history = []) {
+    const messages = [
+        { role: 'system', content: `${SYSTEM_PROMPT_CHAT}\n\nContext:\n${context}` },
+        ...history,
+        { role: 'user', content: question }
+    ];
+    return await callAI(messages);
+}
+
+// --- TUS FUNCIONES DE PARSEO (Las que leen P: y R: / F: y V:) ---
 
 function parseTest(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -117,21 +132,12 @@ function parseTest(text) {
                 }
             }
             questions.push(q);
-            i += 4; // avanza al siguiente bloque
+            i += 4; 
         } else {
-            i++; 
+            i++;
         }
     }
     return questions;
-}
-
-export async function chatWithContext(context, question, history = []) {
-    const messages = [
-        { role: 'system', content: `${SYSTEM_PROMPT_CHAT}\n\nContext:\n${context}` },
-        ...history,
-        { role: 'user', content: question }
-    ];
-    return await callSambaNova(messages);
 }
 
 function parseFlashcards(text) {
