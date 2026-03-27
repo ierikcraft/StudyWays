@@ -48,7 +48,7 @@ async function callAI(messages) {
             },
             body: JSON.stringify({
                 // Usamos Llama 3.1 70B, rapidísimo y con memoria gigante para tus PDFs
-                model: 'Meta-Llama-3.1-70B-Instruct',
+                model: 'Meta-Llama-3.1-8B-Instruct',
                 messages: messages,
                 temperature: 0.5
             })
