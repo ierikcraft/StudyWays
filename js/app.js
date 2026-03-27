@@ -90,15 +90,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.elements.testCountStartBtn.addEventListener('click', async () => {
             const raw = ui.elements.testCountInput.value;
             const count = parseInt(raw, 10);
-            if (!Number.isInteger(count) || count < 1 || count > 50) {
-                return alert('Introduce un número válido entre 1 y 50.');
+            if (!Number.isInteger(count) || count < 1) {
+                return showCustomAlert('Introduce un número válido de al menos 1 pregunta.');
+            }
+            if (count > 30) {
+                return showCustomAlert('Por motivos de seguridad, el límite máximo es de 30 preguntas por test.');
             }
             ui.elements.testCountModal.classList.add('hidden');
 
             // proceed with generating the test (same logic as previous inline flow)
             const text = ui.elements.inputArea.value.trim();
-            if (!text) return alert('Por favor ingresa un texto para generar el test.');
-            if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+            if (!text) return showCustomAlert('Por favor ingresa un texto para generar el test.');
+            if (!currentExam) return showCustomAlert('Selecciona o crea un examen antes de guardar.');
 
             ui.toggleLoading(true);
             try {
@@ -602,4 +605,67 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function showCustomAlert(message) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '99999';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+
+    const box = document.createElement('div');
+    box.style.backgroundColor = 'var(--background-color, #ffffff)';
+    box.style.padding = '2rem';
+    box.style.borderRadius = 'var(--radius-md, 12px)';
+    box.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.2)';
+    box.style.maxWidth = '400px';
+    box.style.width = '90%';
+    box.style.textAlign = 'center';
+    box.style.transform = 'translateY(-20px)';
+    box.style.transition = 'transform 0.3s ease';
+
+    const icon = document.createElement('div');
+    icon.innerHTML = '🛡️';
+    icon.style.fontSize = '3rem';
+    icon.style.marginBottom = '1rem';
+
+    const text = document.createElement('p');
+    text.textContent = message;
+    text.style.fontSize = '1.1rem';
+    text.style.color = 'var(--text-color, #333)';
+    text.style.marginBottom = '1.5rem';
+    text.style.lineHeight = '1.5';
+
+    const btn = document.createElement('button');
+    btn.className = 'btn primary';
+    btn.textContent = 'Entendido';
+    btn.style.width = '100%';
+    btn.style.marginTop = '1rem';
+    
+    btn.addEventListener('click', () => {
+        overlay.style.opacity = '0';
+        box.style.transform = 'translateY(-20px)';
+        setTimeout(() => overlay.remove(), 300);
+    });
+
+    box.appendChild(icon);
+    box.appendChild(text);
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Trigger animation next frame
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        box.style.transform = 'translateY(0)';
+    });
 }
