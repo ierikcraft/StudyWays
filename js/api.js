@@ -1,7 +1,7 @@
 // js/api.js
 
-// ¡Ya no necesitamos API_KEY!
-const BASE_URL = 'https://text.pollinations.ai/';
+const API_KEY = '093a150f-94b9-48c0-98f6-9ec0764c807f'; // Tu clave de SambaNova
+const BASE_URL = 'https://api.sambanova.ai/v1/chat/completions';
 
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
@@ -32,35 +32,36 @@ V: <correct answer>
 Repeat for every question. Do NOT include explanations or headers.`;
 
 /**
- * Llama a la API de Pollinations.
+ * Llama a la API de SambaNova.
  * @param {Array} messages - Array de objetos de mensaje.
  * @returns {Promise<string>} - El contenido de la respuesta.
  */
-async function callPollinations(messages) {
+async function callSambaNova(messages) {
     try {
         const response = await fetch(BASE_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
+                // Utilizamos el modelo Llama 3.1 70B de SambaNova, que es súper rápido e inteligente
+                model: 'Meta-Llama-3.1-70B-Instruct', 
                 messages: messages,
-                // Usamos el modelo por defecto, pero puedes especificar "openai", "mistral" o "llama"
-                model: 'openai', 
-                seed: Math.floor(Math.random() * 1000) // Añadimos algo de aleatoriedad para evitar caché de Pollinations
+                temperature: 0.5
             })
         });
 
         if (!response.ok) {
-            const errText = await response.text().catch(() => null);
-            throw new Error(`API Error ${response.status}: ${errText}`);
+            const errData = await response.json().catch(() => null);
+            const errDetails = errData ? JSON.stringify(errData) : response.statusText;
+            throw new Error(`API Error ${response.status}: ${errDetails}`);
         }
 
-        // A diferencia de Groq, Pollinations devuelve el texto directamente, no un JSON.
-        const text = await response.text();
-        return text;
+        const data = await response.json();
+        return data.choices[0]?.message?.content || '';
     } catch (error) {
-        console.error('Pollinations API Call Failed:', error);
+        console.error('SambaNova API Call Failed:', error);
         throw error;
     }
 }
@@ -70,7 +71,7 @@ export async function generateSummary(text) {
         { role: 'system', content: SYSTEM_PROMPT_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callPollinations(messages);
+    return await callSambaNova(messages);
 }
 
 export async function generateAudioSummary(text) {
@@ -78,7 +79,7 @@ export async function generateAudioSummary(text) {
         { role: 'system', content: SYSTEM_PROMPT_AUDIO_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callPollinations(messages);
+    return await callSambaNova(messages);
 }
 
 export async function generateFlashcards(text, count = 5) {
@@ -86,7 +87,7 @@ export async function generateFlashcards(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callPollinations(messages);
+    const rawOutput = await callSambaNova(messages);
     return parseFlashcards(rawOutput);
 }
 
@@ -95,7 +96,7 @@ export async function generateTest(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_TEST(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callPollinations(messages);
+    const rawOutput = await callSambaNova(messages);
     return parseTest(rawOutput);
 }
 
@@ -118,7 +119,7 @@ function parseTest(text) {
             questions.push(q);
             i += 4; // avanza al siguiente bloque
         } else {
-            i++; // Ignora texto de relleno que la IA pueda añadir al principio o final
+            i++; 
         }
     }
     return questions;
@@ -130,7 +131,7 @@ export async function chatWithContext(context, question, history = []) {
         ...history,
         { role: 'user', content: question }
     ];
-    return await callPollinations(messages);
+    return await callSambaNova(messages);
 }
 
 function parseFlashcards(text) {
