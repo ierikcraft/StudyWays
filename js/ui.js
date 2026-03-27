@@ -438,7 +438,17 @@ export function renderTest(questions, onComplete, opts = {}) {
                 '¡Dominas este tema!',
                 '¡Fantástico esfuerzo!',
                 '¡Una diva es valiente i poderosa!',
-                '¡Bravo, sigue brillando!'
+                '¡Bravo, sigue brillando!',
+                '¡Ni Einstein en sus mejores días!',
+                '¡Aprobado con honores y estilo!',
+                '¡Cuidado, que tu cerebro está echando humo (del bueno)!',
+                '¡Más crack que un hueso roto!',
+                '¡Sobresaliente! El próximo premio Nobel es tuyo.',
+                '¡Modo Dios: ACTIVADO!',
+                '¡Tu inteligencia asusta un poco la verdad!',
+                '¡Eso es! Hasta Google te pediría consejos.',
+                '¡Felicidades! Tienes más luces que un árbol de Navidad.',
+                '¡Te saliste! Eres el/la MVP de este test.'
             ];
 
             const failPhrases = [
@@ -452,7 +462,17 @@ export function renderTest(questions, onComplete, opts = {}) {
                 'Un pequeño tropiezo, ¡tú puedes con esto!',
                 'Poco a poco, ¡lo vas a lograr!',
                 'No he visto a nadie mas malo que tu pero, ¡lo vas a lograr!',
-                'El éxito requiere tiempo, ¡sigue adelante!'
+                'El éxito requiere tiempo, ¡sigue adelante!',
+                'Bueno, al menos seguro que eres guapo/a...',
+                '¡Ups! Parece que tu cerebro estaba en modo avión.',
+                'Tranquilo/a, hasta a Messi se le escapan los penaltis.',
+                'Hemos tocado fondo, ¡ahora solo queda subir!',
+                '¡Error 404: Respuesta correcta no encontrada!',
+                'Creo que necesitas un café... o tres.',
+                '¡Casi! Solo te faltó la parte de acertar.',
+                'La intención es lo que cuenta (aunque aquí no sume puntos).',
+                '¡Ánimo! Roma no se construyó en un día, tampoco tus dieces.',
+                'Si lloras, asegúrate de no mojar el teclado.'
             ];
 
             // descriptive sentence
