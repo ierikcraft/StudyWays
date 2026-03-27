@@ -17,6 +17,11 @@ const SYSTEM_PROMPT_AUDIO_SUMMARY = `You are a helpful study assistant. Create a
 - Focus on the key points only
 Just provide the summary text, nothing else.`;
 
+const SYSTEM_PROMPT_EXPERT_ADVICE = `Eres un experto tutor académico. El usuario acaba de completar un test. 
+Se te proporcionará el texto de estudio original, las preguntas que el usuario ha fallado y qué respondió incorrectamente.
+Tu tarea es analizar los fallos y darle un consejo amable, directo y estructurado de qué partes o temas específicos del texto debería repasar más a fondo.
+Da indicaciones claras. Responde en español y formatéalo en markdown con bullet points.`;
+
 const SYSTEM_PROMPT_FLASHCARDS = (count) => `You are a helpful study assistant. Your task is to generate exactly ${count} flashcards from the provided text.
 The output format MUST be strictly:
 P: [Question]
@@ -102,6 +107,21 @@ export async function generateTest(text, count = 5) {
     ];
     const rawOutput = await callAI(messages);
     return parseTest(rawOutput);
+}
+
+export async function getExpertAdvice(text, incorrectQuestions) {
+    const context = `
+TEXTO DE ESTUDIO ORIGINAL:
+${text}
+
+PREGUNTAS FALLADAS POR EL USUARIO:
+${JSON.stringify(incorrectQuestions, null, 2)}
+`;
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT_EXPERT_ADVICE },
+        { role: 'user', content: context }
+    ];
+    return await callAI(messages);
 }
 
 export async function chatWithContext(context, question, history = []) {

@@ -508,6 +508,18 @@ export function renderTest(questions, onComplete, opts = {}) {
             nextBtn.addEventListener('click', () => {
                 elements.outputArea.scrollTop = 0;
             });
+
+            if (opts.onExpertAdvice && !nav.querySelector('.expert-btn')) {
+                const expertBtn = document.createElement('button');
+                expertBtn.className = 'btn primary expert-btn';
+                expertBtn.style.backgroundColor = '#8b5cf6';
+                expertBtn.style.borderColor = '#8b5cf6';
+                expertBtn.innerHTML = '💡 Consejo del Experto';
+                expertBtn.addEventListener('click', () => {
+                   opts.onExpertAdvice(qs, answers, qWrapper, expertBtn); 
+                });
+                nav.insertBefore(expertBtn, nextBtn);
+            }
         }
     });
 
@@ -531,6 +543,12 @@ export function renderTest(questions, onComplete, opts = {}) {
             btn.classList.remove('answered', 'correct', 'incorrect', 'current');
         });
         elements.contentTitle.textContent = 'Test';
+
+        const existingExpert = nav.querySelector('.expert-btn');
+        if (existingExpert) existingExpert.remove();
+        const existingAdvice = qWrapper.querySelector('.advice-content');
+        if (existingAdvice) existingAdvice.remove();
+
         renderQuestion(index);
     });
 

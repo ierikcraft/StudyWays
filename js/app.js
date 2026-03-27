@@ -121,6 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         meta: { count }
                     });
                     await loadHistory();
+                }, {
+                    onExpertAdvice: (qs, answers, container, btn) => handleExpertAdvice(text, qs, answers, container, btn)
                 });
             } catch (err) {
                 console.error(err);
@@ -530,7 +532,11 @@ async function loadHistory() {
                         meta: { count: result.total }
                     });
                     await loadHistory();
-                }, { readOnly: true, userAnswers });
+                }, { 
+                    readOnly: true, 
+                    userAnswers,
+                    onExpertAdvice: (qs, answers, container, btn) => handleExpertAdvice(session.originalText || ui.elements.inputArea.value, qs, answers, container, btn)
+                });
             } else if (session.type === 'chat') {
                 // Restore chat if implemented
             }
@@ -668,4 +674,54 @@ function showCustomAlert(message) {
         overlay.style.opacity = '1';
         box.style.transform = 'translateY(0)';
     });
+}
+
+async function handleExpertAdvice(text, qs, answers, container, btn) {
+    if (!text) return showCustomAlert('No hay texto original para aconsejar.');
+    
+    // Filter incorrect answers
+    const incorrect = qs.map((q, i) => {
+        const a = answers[i];
+        if (!a || !a.correct) {
+            return {
+                question: q.question,
+                userAnswer: a ? q.options[a.selected].text : 'No respondida',
+                correctAnswer: q.options.find(o => o.correct)?.text
+            };
+        }
+        return null;
+    }).filter(Boolean);
+
+    if (incorrect.length === 0) {
+        return showCustomAlert('¡Has acertado todas! No necesitas consejos, ¡sigue así!');
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Entendiendo tus fallos...';
+
+    try {
+        const advice = await api.getExpertAdvice(text, incorrect);
+        
+        const div = document.createElement('div');
+        div.className = 'advice-content fade-in';
+        div.style.marginTop = '2rem';
+        div.style.padding = '1.5rem';
+        div.style.backgroundColor = 'var(--background-color)';
+        div.style.borderRadius = 'var(--radius-md)';
+        div.style.borderLeft = '4px solid #8b5cf6';
+        div.innerHTML = `<h3 style="color: #8b5cf6; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;"><span>💡</span> Consejo del Experto</h3><div class="markdown-body" style="font-size: 0.95rem; line-height: 1.6;">${marked.parse(advice)}</div>`;
+        
+        container.appendChild(div);
+        
+        // Use requestAnimationFrame to let DOM update before scrolling
+        requestAnimationFrame(() => {
+             container.scrollTop = container.scrollHeight;
+        });
+        btn.style.display = 'none'; // hide button once clicked
+    } catch (err) {
+        console.error(err);
+        showCustomAlert('Error obteniendo consejo: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '💡 Consejo del Experto';
+    }
 }
