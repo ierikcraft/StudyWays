@@ -343,9 +343,9 @@ function updateCharCount(e) {
 // --- Test Logic ---
 async function handleTest() {
     const text = ui.elements.inputArea.value.trim();
-    if (!text) return alert('Por favor ingresa un texto para generar el test.');
-    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
-    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+    if (!text) return showCustomAlert('Por favor ingresa un texto para generar el test.');
+    if (text.length > 25000) return showCustomAlert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
+    if (!currentExam) return showCustomAlert('Selecciona o crea un examen antes de guardar.');
 
     // show modal to pick number of questions (replaces prompt())
     const defaultCount = Number(ui.elements.flashcardCountInput.value) || 5;
