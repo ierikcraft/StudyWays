@@ -437,6 +437,7 @@ export function renderTest(questions, onComplete, opts = {}) {
                 '¡Impresionante!',
                 '¡Dominas este tema!',
                 '¡Fantástico esfuerzo!',
+                '¡Una diva es valiente i poderosa!',
                 '¡Bravo, sigue brillando!'
             ];
 
@@ -450,6 +451,7 @@ export function renderTest(questions, onComplete, opts = {}) {
                 '¡Toma aire y vuelve a intentarlo!',
                 'Un pequeño tropiezo, ¡tú puedes con esto!',
                 'Poco a poco, ¡lo vas a lograr!',
+                'No he visto a nadie mas malo que tu pero, ¡lo vas a lograr!',
                 'El éxito requiere tiempo, ¡sigue adelante!'
             ];
 
