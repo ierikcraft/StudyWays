@@ -93,8 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!Number.isInteger(count) || count < 1) {
                 return showCustomAlert('Introduce un número válido de al menos 1 pregunta.');
             }
-            if (count > 30) {
-                return showCustomAlert('Por motivos de seguridad, el límite máximo es de 30 preguntas por test.');
+            if (count > 50) {
+                return showCustomAlert('Por motivos de seguridad, el límite máximo es de 50 preguntas por test.');
             }
             ui.elements.testCountModal.classList.add('hidden');
 
