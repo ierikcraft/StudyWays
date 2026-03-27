@@ -193,11 +193,6 @@ export function renderFlashcards(cards, onExplain) {
         `;
         currentSpan.textContent = currentIndex + 1;
         displayCard.classList.remove('flipped');
-
-        // Re-attach click listener for flip
-        displayCard.addEventListener('click', () => {
-            displayCard.classList.toggle('flipped');
-        });
     }
 
     displayCard.addEventListener('click', () => {
