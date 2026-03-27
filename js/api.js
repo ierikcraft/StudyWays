@@ -1,5 +1,7 @@
-const API_KEY = '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'; // Hardcoded as per request
-const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
+// js/api.js
+
+// ¡Ya no necesitamos API_KEY!
+const BASE_URL = 'https://text.pollinations.ai/';
 
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
 
@@ -22,38 +24,43 @@ Do not include any other text, intro, or outro. Just the P/R pairs.`;
 
 const SYSTEM_PROMPT_CHAT = `You are a helpful study assistant. Answer the user's question based strictly on the provided context text. If the answer is not in the text, say you don't know based on the context. Be concise and clear.`;
 
-const SYSTEM_PROMPT_TEST = (count) => `You are a study test generator. Generate exactly ${count} multiple-choice questions based ONLY on the provided text. For each question output EXACTLY four lines in this order and format (no extra text or numbering):\nP: <question>\nF: <wrong answer>\nF: <wrong answer>\nV: <correct answer>\nRepeat for every question. Do NOT include explanations or headers.`;
+const SYSTEM_PROMPT_TEST = (count) => `You are a study test generator. Generate exactly ${count} multiple-choice questions based ONLY on the provided text. For each question output EXACTLY four lines in this order and format (no extra text or numbering):
+P: <question>
+F: <wrong answer>
+F: <wrong answer>
+V: <correct answer>
+Repeat for every question. Do NOT include explanations or headers.`;
 
 /**
- * Calls the Groq API.
- * @param {string} messages - Array of message objects.
- * @returns {Promise<string>} - The content of the response.
+ * Llama a la API de Pollinations.
+ * @param {Array} messages - Array de objetos de mensaje.
+ * @returns {Promise<string>} - El contenido de la respuesta.
  */
-async function callGroq(messages) {
+async function callPollinations(messages) {
     try {
         const response = await fetch(BASE_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile', // Using a fast model supported by Groq
                 messages: messages,
-                temperature: 0.5
+                // Usamos el modelo por defecto, pero puedes especificar "openai", "mistral" o "llama"
+                model: 'openai', 
+                seed: Math.floor(Math.random() * 1000) // Añadimos algo de aleatoriedad para evitar caché de Pollinations
             })
         });
 
         if (!response.ok) {
-            const errData = await response.json().catch(() => null);
-            const errDetails = errData ? JSON.stringify(errData) : response.statusText;
-            throw new Error(`API Error ${response.status}: ${errDetails}`);
+            const errText = await response.text().catch(() => null);
+            throw new Error(`API Error ${response.status}: ${errText}`);
         }
 
-        const data = await response.json();
-        return data.choices[0]?.message?.content || '';
+        // A diferencia de Groq, Pollinations devuelve el texto directamente, no un JSON.
+        const text = await response.text();
+        return text;
     } catch (error) {
-        console.error('Groq API Call Failed:', error);
+        console.error('Pollinations API Call Failed:', error);
         throw error;
     }
 }
@@ -63,7 +70,7 @@ export async function generateSummary(text) {
         { role: 'system', content: SYSTEM_PROMPT_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callGroq(messages);
+    return await callPollinations(messages);
 }
 
 export async function generateAudioSummary(text) {
@@ -71,7 +78,7 @@ export async function generateAudioSummary(text) {
         { role: 'system', content: SYSTEM_PROMPT_AUDIO_SUMMARY },
         { role: 'user', content: text }
     ];
-    return await callGroq(messages);
+    return await callPollinations(messages);
 }
 
 export async function generateFlashcards(text, count = 5) {
@@ -79,7 +86,7 @@ export async function generateFlashcards(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_FLASHCARDS(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callGroq(messages);
+    const rawOutput = await callPollinations(messages);
     return parseFlashcards(rawOutput);
 }
 
@@ -88,7 +95,7 @@ export async function generateTest(text, count = 5) {
         { role: 'system', content: SYSTEM_PROMPT_TEST(count) },
         { role: 'user', content: text }
     ];
-    const rawOutput = await callGroq(messages);
+    const rawOutput = await callPollinations(messages);
     return parseTest(rawOutput);
 }
 
@@ -100,7 +107,6 @@ function parseTest(text) {
         const line = lines[i];
         if (line.startsWith('P:')) {
             const q = { question: line.substring(2).trim(), options: [] };
-            // expect next three lines to be F/F/V in any order per spec
             for (let j = 1; j <= 3 && (i + j) < lines.length; j++) {
                 const optLine = lines[i + j];
                 if (optLine.startsWith('F:')) {
@@ -110,9 +116,9 @@ function parseTest(text) {
                 }
             }
             questions.push(q);
-            i += 4; // move to next block
+            i += 4; // avanza al siguiente bloque
         } else {
-            i++;
+            i++; // Ignora texto de relleno que la IA pueda añadir al principio o final
         }
     }
     return questions;
@@ -124,7 +130,7 @@ export async function chatWithContext(context, question, history = []) {
         ...history,
         { role: 'user', content: question }
     ];
-    return await callGroq(messages);
+    return await callPollinations(messages);
 }
 
 function parseFlashcards(text) {
