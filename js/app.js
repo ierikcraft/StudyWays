@@ -169,25 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // showApp already handles showing the notebook dashboard if the user is logged in.
 });
 
-async function loadExams() {
-    try {
-        const exams = await storage.listExams(currentUser.id);
-        if (!exams || exams.length === 0) {
-            // create default exam
-            const d = await storage.createExam(currentUser.id, { emoji: '📚', title: 'General' });
-            currentExam = d;
-            await loadHistory();
-            await refreshExamsList();
-            return;
-        }
-        await refreshExamsList();
-        // select first exam if none selected
-        if (!currentExam) selectExam(exams[0]);
-    } catch (err) {
-        console.error('Error loading exams', err);
-        alert('No se pudieron cargar los exámenes.');
-    }
-}
 
 async function refreshExamsList() {
     const exams = await storage.listExams(currentUser.id);

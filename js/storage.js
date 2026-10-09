@@ -48,8 +48,18 @@ export async function listExams(uid) {
     }
 
     const combined = [...localExams, ...fbExams];
-    combined.sort((a, b) => b.createdAt - a.createdAt);
-    return combined;
+    
+    const unique = [];
+    const seen = new Set();
+    for (const exam of combined) {
+        if (!seen.has(exam.id)) {
+            seen.add(exam.id);
+            unique.push(exam);
+        }
+    }
+    
+    unique.sort((a, b) => b.createdAt - a.createdAt);
+    return unique;
 }
 
 export async function createExam(uid, { emoji = '📘', title = 'Nuevo examen' } = {}) {
