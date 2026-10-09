@@ -166,10 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === ui.elements.testCountModal) ui.elements.testCountModal.classList.add('hidden');
     });
 
-    // If user already logged in, show notebook dashboard (local-only storage)
-    if (currentUser) {
-        showNotebookDashboard();
-    }
+    // showApp already handles showing the notebook dashboard if the user is logged in.
 });
 
 async function loadExams() {
@@ -315,11 +312,11 @@ function showAppContainer() {
 
 async function renderNotebooksDashboard() {
     if (!currentUser) return;
-    const grid = document.getElementById('notebooks-grid');
-    grid.querySelectorAll('.notebook-card.item').forEach(n => n.remove());
 
     try {
         const exams = await storage.listExams(currentUser.id);
+        const grid = document.getElementById('notebooks-grid');
+        grid.querySelectorAll('.notebook-card.item').forEach(n => n.remove());
         exams.forEach(exam => {
             const card = document.createElement('div');
             card.className = 'notebook-card item';
