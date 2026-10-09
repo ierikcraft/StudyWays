@@ -12,6 +12,15 @@ let currentExam = null;
 let loadedPDFs = []; // Array to store loaded PDFs
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ErikAI Welcome popup
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('erikai') === 'true' && !localStorage.getItem('erikai_welcome_shown')) {
+        setTimeout(() => {
+            showCustomAlert("ErikAI ha mejorado la forma de estudiar:\n\n✅ Crea resúmenes de audio\n✅ Crea flash cards\ny mucho más...", "✨");
+            localStorage.setItem('erikai_welcome_shown', 'true');
+        }, 500);
+    }
+
     // Check Auth
     let user = auth.getUser();
     if (!user) {
@@ -613,7 +622,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function showCustomAlert(message) {
+function showCustomAlert(message, customIcon = '🛡️') {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.top = '0';
@@ -640,7 +649,7 @@ function showCustomAlert(message) {
     box.style.transition = 'transform 0.3s ease';
 
     const icon = document.createElement('div');
-    icon.innerHTML = '🛡️';
+    icon.innerHTML = customIcon;
     icon.style.fontSize = '3rem';
     icon.style.marginBottom = '1rem';
 
@@ -650,6 +659,7 @@ function showCustomAlert(message) {
     text.style.color = 'var(--text-color, #333)';
     text.style.marginBottom = '1.5rem';
     text.style.lineHeight = '1.5';
+    text.style.whiteSpace = 'pre-wrap';
 
     const btn = document.createElement('button');
     btn.className = 'btn primary';
