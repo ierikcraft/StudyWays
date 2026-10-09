@@ -1,5 +1,5 @@
 import { db } from './firebase.js';
-import { ref, set, get, push, remove, child } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
+import { ref, set, get, push, remove, child, update } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 
 function ensureArg(arg, name) { if (!arg) throw new Error(`${name} is required`); }
 function examsKey(uid) { return `studyways_exams_${uid}`; }
@@ -20,7 +20,28 @@ export async function listExams(uid) {
         const snapshot = await get(ref(db, `users/${uid}/exams`));
         if (snapshot.exists()) {
             const data = snapshot.val();
-            fbExams = Object.keys(data).map(key => ({ id: key, ...data[key], isLocal: false }));
+            
+            const updates = {};
+            let needsMigration = false;
+            
+            fbExams = Object.keys(data).map(key => {
+                const exam = { id: key, ...data[key], isLocal: false };
+                
+                // Migrate PDFs to new location so they don't slow down future exam listings
+                if (exam.pdfs) {
+                    updates[`users/${uid}/exam_pdfs/${key}`] = exam.pdfs;
+                    updates[`users/${uid}/exams/${key}/pdfs`] = null;
+                    delete exam.pdfs;
+                    needsMigration = true;
+                }
+                
+                return exam;
+            });
+            
+            if (needsMigration) {
+                // Run migration in background
+                update(ref(db), updates).catch(err => console.error("Migration error:", err));
+            }
         }
     } catch (err) {
         console.error("Error fetching exams from Firebase:", err);
@@ -58,6 +79,7 @@ export async function deleteExam(uid, examId) {
         // Delete from Firebase
         await remove(ref(db, `users/${uid}/exams/${examId}`));
         await remove(ref(db, `users/${uid}/sessions/${examId}`));
+        await remove(ref(db, `users/${uid}/exam_pdfs/${examId}`));
     }
 }
 
@@ -169,7 +191,7 @@ export async function savePdfToExam(uid, examId, pdfName, base64) {
         return null;
     }
 
-    const newPdfRef = push(ref(db, `users/${uid}/exams/${examId}/pdfs`));
+    const newPdfRef = push(ref(db, `users/${uid}/exam_pdfs/${examId}`));
     const pdfData = { name: pdfName, value: base64, createdAt: Date.now() };
     await set(newPdfRef, pdfData);
 
@@ -185,7 +207,12 @@ export async function loadPdfsForExam(uid, examId) {
 
     let pdfs = [];
     try {
-        const snapshot = await get(ref(db, `users/${uid}/exams/${examId}/pdfs`));
+        let snapshot = await get(ref(db, `users/${uid}/exam_pdfs/${examId}`));
+        
+        if (!snapshot.exists()) {
+            snapshot = await get(ref(db, `users/${uid}/exams/${examId}/pdfs`));
+        }
+
         if (snapshot.exists()) {
             const data = snapshot.val();
             pdfs = Object.keys(data).map(key => ({ id: key, ...data[key] }));
@@ -204,5 +231,6 @@ export async function removePdfFromExam(uid, examId, pdfId) {
     const isLocal = readLocalExams(uid).some(e => String(e.id) === String(examId));
     if (isLocal) return;
 
+    await remove(ref(db, `users/${uid}/exam_pdfs/${examId}/${pdfId}`));
     await remove(ref(db, `users/${uid}/exams/${examId}/pdfs/${pdfId}`));
 }
