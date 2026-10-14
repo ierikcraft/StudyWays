@@ -104,6 +104,8 @@ textarea {
     font-size: 0.95rem;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
     box-shadow: var(--shadow-sm);
+    position: relative;
+    z-index: 1000;
 }
 
 /* Animations */
