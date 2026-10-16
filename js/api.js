@@ -1,10 +1,7 @@
 // js/api.js
 
-// 1. PEGA AQUÍ TU CLAVE DE SAMBANOVA
-const API_KEY = '77766d5a-cf15-4e4e-9acb-67e468f6fe45';
-
-// URL de SambaNova (idéntica a la estructura de Groq/OpenAI)
-const BASE_URL = 'https://api.sambanova.ai/v1/chat/completions';
+// URL de Pollinations AI (compatible con formato OpenAI, gratuita y con soporte CORS para navegador)
+const BASE_URL = 'https://text.pollinations.ai/openai';
 
 // --- TUS PROMPTS ORIGINALES INTACTOS ---
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
@@ -41,32 +38,30 @@ V: <correct answer>
 Repeat for every question. Do NOT include explanations or headers.`;
 
 /**
- * Llama a la API de SambaNova.
+ * Llama a la API de IA (Pollinations OpenAI endpoint).
  */
 async function callAI(messages) {
     try {
         const response = await fetch(BASE_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                // Usamos Llama 3.1 70B, rapidísimo y con memoria gigante para tus PDFs
-                model: 'MiniMax-M3',
+                model: 'openai',
                 messages: messages,
-                temperature: 0.5
+                temperature: 0.5,
+                seed: Math.floor(Math.random() * 1000000)
             })
         });
 
         if (!response.ok) {
-            const errData = await response.json().catch(() => null);
-            const errDetails = errData ? JSON.stringify(errData) : response.statusText;
-            throw new Error(`API Error ${response.status}: ${errDetails}`);
+            const errText = await response.text().catch(() => null);
+            throw new Error(`API Error ${response.status}: ${errText || response.statusText}`);
         }
 
         const data = await response.json();
-        return data.choices[0]?.message?.content || '';
+        return data.choices?.[0]?.message?.content || '';
     } catch (error) {
         console.error('API Call Failed:', error);
         throw error;

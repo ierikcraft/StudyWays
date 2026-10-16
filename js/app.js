@@ -1,8 +1,8 @@
-import * as api from './api.js?v=6';
-import * as storage from './storage.js?v=6';
-import * as ui from './ui.js?v=6';
-import * as auth from './auth.js?v=6';
-import * as pdfUtils from './pdf_utils.js?v=6';
+import * as api from './api.js?v=7';
+import * as storage from './storage.js?v=7';
+import * as ui from './ui.js?v=7';
+import * as auth from './auth.js?v=7';
+import * as pdfUtils from './pdf_utils.js?v=7';
 
 let flashcardCount = 5;
 let chatHistory = [];
