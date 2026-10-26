@@ -11,7 +11,42 @@ let currentUser = null;
 let currentExam = null;
 let loadedPDFs = []; // Array to store loaded PDFs
 
+
+function initSplashScreen() {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
+
+    let hidden = false;
+    const hide = () => {
+        if (hidden) return;
+        hidden = true;
+        splash.classList.add('fade-out');
+        setTimeout(() => {
+            splash.style.display = 'none';
+        }, 500);
+    };
+
+    // Keep splash visible for at least 1.1s for a smooth branding experience
+    const minDisplayTime = 1100;
+    const startTime = Date.now();
+
+    const onReady = () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minDisplayTime - elapsed);
+        setTimeout(hide, remaining);
+    };
+
+    if (document.readyState === 'complete') {
+        onReady();
+    } else {
+        window.addEventListener('load', onReady);
+        // Safety fallback timeout
+        setTimeout(onReady, 2500);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    initSplashScreen();
     // ErikAI Welcome popup
     const urlParams = new URLSearchParams(window.location.search);
     const erikaiParam = urlParams.get('erikai');

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StudyWays - Tu Asistente de Estudio</title>
     <link rel="icon" type="image/png" href="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,6 +18,20 @@
 </head>
 
 <body>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <div class="splash-logo-wrapper">
+                <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays Logo" class="splash-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
+            </div>
+            <h1 class="splash-title">StudyWays</h1>
+            <p class="splash-subtitle">Tu compañero de estudio inteligente</p>
+            <div class="splash-loader">
+                <div class="splash-loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Si se experimentan problemas descomentas esta linea -->
     <!-- <div class="site-alert" role="alert">⚠️ StudyWays está experimentando problemas</div> -->
@@ -245,7 +259,7 @@
         </div>
     </div>
 
-    <script type="module" src="js/app.js?v=7"></script>
+    <script type="module" src="js/app.js?v=8"></script>
 </body>
 
 </html>
