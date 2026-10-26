@@ -246,6 +246,32 @@ textarea {
 }
 
 /* Top Bar */
+
+/* Header Brand & Logo */
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+
+.top-bar .header-brand h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.dashboard-header .header-brand h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
 .top-bar {
     height: 64px;
     background-color: var(--surface-color);
@@ -529,6 +555,14 @@ textarea:focus {
 
 /* Responsive */
 @media (max-width: 768px) {
+    .top-bar .header-brand h1 {
+        font-size: 1.1rem;
+    }
+
+    .dashboard-header .header-brand h1 {
+        font-size: 1.4rem;
+    }
+
     .app-container {
         flex-direction: column;
     }
