@@ -1,8 +1,8 @@
-import * as api from './api.js?v=10';
-import * as storage from './storage.js?v=10';
-import * as ui from './ui.js?v=10';
-import * as auth from './auth.js?v=10';
-import * as pdfUtils from './pdf_utils.js?v=10';
+import * as api from './api.js?v=11';
+import * as storage from './storage.js?v=11';
+import * as ui from './ui.js?v=11';
+import * as auth from './auth.js?v=11';
+import * as pdfUtils from './pdf_utils.js?v=11';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -90,46 +90,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnUpload.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async (e) => {
-        const files = e.target.files;
-        if (files.length > 0) {
-            ui.toggleLoading(true);
+        const files = Array.from(e.target.files || []);
+        // Reset input enseguida para poder volver a elegir los mismos archivos
+        fileInput.value = '';
+        if (files.length === 0) return;
+
+        const loadingText = document.querySelector('#loading p');
+        const originalLoadingText = loadingText ? loadingText.textContent : '';
+        let done = 0;
+        const setProgress = () => {
+            if (loadingText) loadingText.textContent = `Procesando archivos... ${done}/${files.length}`;
+        };
+
+        ui.toggleLoading(true);
+        setProgress();
+
+        // Procesa cada archivo por separado: si uno falla, los demás siguen
+        const processFile = async (file) => {
             try {
-                for (let file of files) {
-                    let base64;
-                    let text;
-                    if (pdfUtils.isImageFile(file)) {
-                        // Foto -> texto con Pollinations AI
-                        const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
-                        text = await api.imageToText(imageDataUrl);
-                        if (!text.trim()) throw new Error(`No se detectó texto en "${file.name}"`);
-                        // Guardamos el texto extraído (no la foto) para no reprocesarla
-                        base64 = pdfUtils.textToDataUrl(text);
-                    } else {
-                        base64 = await pdfUtils.fileToBase64(file);
-                        text = await pdfUtils.extractTextFromPDF(file);
-                    }
-                    
-                    let fakeId = Date.now() + Math.random();
-                    if (currentExam && !currentExam.isLocal) {
-                        try {
-                            const result = await storage.savePdfToExam(currentUser.id, currentExam.id, file.name, base64);
-                            if (result) {
-                                fakeId = result.id;
-                            }
-                        } catch (err) {
-                            console.error("Cloud save failed for PDF", err);
-                        }
-                    }
-                    addPDFToList(file.name, text, fakeId);
+                let base64;
+                let text;
+                if (pdfUtils.isImageFile(file)) {
+                    // Foto -> texto con Pollinations AI (vía /api/vision)
+                    const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
+                    text = await api.imageToText(imageDataUrl);
+                    if (!text.trim()) throw new Error('no se detectó texto');
+                    // Guardamos el texto extraído (no la foto) para no reprocesarla
+                    base64 = pdfUtils.textToDataUrl(text);
+                } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+                    base64 = await pdfUtils.fileToBase64(file);
+                    text = await pdfUtils.extractTextFromPDF(file);
+                    if (!text.trim()) throw new Error('el PDF no contiene texto seleccionable');
+                } else {
+                    throw new Error('formato no soportado');
                 }
-            } catch (error) {
-                alert('Error al leer el archivo: ' + error.message);
-                console.error(error);
+
+                let id = Date.now() + Math.random();
+                if (currentExam && !currentExam.isLocal) {
+                    try {
+                        const result = await storage.savePdfToExam(currentUser.id, currentExam.id, file.name, base64);
+                        if (result) id = result.id;
+                    } catch (err) {
+                        console.error('Cloud save failed for file', file.name, err);
+                    }
+                }
+                return { ok: true, name: file.name, text, id };
+            } catch (err) {
+                console.error('Error procesando', file.name, err);
+                return { ok: false, name: file.name, error: err.message || String(err) };
             } finally {
-                ui.toggleLoading(false);
-                // Reset input
-                fileInput.value = '';
+                done++;
+                setProgress();
             }
+        };
+
+        try {
+            const results = await runWithConcurrency(files, 3, processFile);
+
+            // Se añaden en el mismo orden en que se seleccionaron
+            results.filter(r => r.ok).forEach(r => addPDFToList(r.name, r.text, r.id));
+
+            const failed = results.filter(r => !r.ok);
+            if (failed.length) {
+                showCustomAlert(
+                    `No se pudieron leer ${failed.length} de ${files.length} archivo(s):\n\n` +
+                    failed.map(r => `• ${r.name}: ${r.error}`).join('\n'),
+                    '⚠️'
+                );
+            }
+        } finally {
+            ui.toggleLoading(false);
+            if (loadingText) loadingText.textContent = originalLoadingText;
         }
     });
 
@@ -580,6 +611,20 @@ async function loadHistory() {
 }
 
 // PDF Management Functions
+// Ejecuta tareas en paralelo con un límite, devolviendo los resultados en el orden original
+async function runWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let next = 0;
+    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (next < items.length) {
+            const i = next++;
+            results[i] = await worker(items[i], i);
+        }
+    });
+    await Promise.all(runners);
+    return results;
+}
+
 function addPDFToList(filename, textContent, providedId) {
     const id = providedId || (Date.now() + Math.random());
     if (!loadedPDFs.find(p => p.id === id)) {
@@ -608,11 +653,12 @@ async function removePDFFromList(id) {
 }
 
 function updateTextAreaFromPDFs() {
-    if (loadedPDFs.length > 0) {
-        const combinedText = loadedPDFs.map(pdf => pdf.text).join('\n\n--- Nueva página ---\n\n');
-        ui.elements.inputArea.value = combinedText;
-        ui.elements.inputArea.dispatchEvent(new Event('input'));
-    }
+    // Junta el texto de todos los PDFs y fotos, con el nombre de cada archivo como cabecera
+    const combinedText = loadedPDFs
+        .map(file => `=== ${file.name} ===\n\n${(file.text || '').trim()}`)
+        .join('\n\n');
+    ui.elements.inputArea.value = combinedText;
+    ui.elements.inputArea.dispatchEvent(new Event('input'));
 }
 
 function updatePDFListUI() {
