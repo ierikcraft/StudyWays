@@ -41,3 +41,59 @@ export function fileToBase64(file) {
         reader.readAsDataURL(file);
     });
 }
+
+// --- Imágenes ---
+
+export function isImageFile(file) {
+    return file && file.type && file.type.startsWith('image/');
+}
+
+/**
+ * Lee una imagen y la reescala (máx. maxSize px en el lado mayor) a JPEG data URL,
+ * para reducir el tamaño enviado a la IA.
+ */
+export function imageFileToDataUrl(file, maxSize = 1600, quality = 0.85) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            try {
+                let { width, height } = img;
+                const scale = Math.min(1, maxSize / Math.max(width, height));
+                width = Math.round(width * scale);
+                height = Math.round(height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            } catch (err) {
+                reject(err);
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('No se pudo leer la imagen'));
+        };
+        img.src = url;
+    });
+}
+
+// Guarda texto como data URL (para no volver a procesar la foto al recargar)
+export function textToDataUrl(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return 'data:text/plain;base64,' + window.btoa(binary);
+}
+
+export function dataUrlToText(dataUrl) {
+    const raw = window.atob(dataUrl.split(',')[1]);
+    const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+}

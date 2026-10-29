@@ -68,6 +68,28 @@ async function callAI(messages) {
     }
 }
 
+// --- Imagen a texto (solo para fotos) ---
+// La llamada a Pollinations se hace en la función serverless de Vercel (api/vision.js),
+// que lee la API key de la variable de entorno POLLINATIONS_API_KEY.
+const VISION_ENDPOINT = '/api/vision';
+
+/**
+ * Convierte una imagen (data URL base64) a texto.
+ */
+export async function imageToText(dataUrl) {
+    const response = await fetch(VISION_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `Error de visión ${response.status}`);
+    }
+    return data.text || '';
+}
+
 // --- TUS FUNCIONES PRINCIPALES ---
 
 export async function generateSummary(text) {

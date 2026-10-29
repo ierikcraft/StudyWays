@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StudyWays - Tu Asistente de Estudio</title>
     <link rel="icon" type="image/png" href="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png">
-    <link rel="stylesheet" href="css/styles.css?v=8">
+    <link rel="stylesheet" href="css/styles.css?v=10">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -133,10 +133,10 @@
                     <div class="input-header">
                         <h3>Texto de Entrada</h3>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="file" id="pdf-upload" accept=".pdf" multiple class="hidden">
+                            <input type="file" id="pdf-upload" accept=".pdf,image/*" multiple class="hidden">
                             <button id="btn-upload-pdf" class="btn secondary"
-                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDF">
-                                📄 Subir PDFs
+                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDFs o fotos">
+                                📄 Subir PDFs / Fotos
                             </button>
                             <span id="char-count" class="text-muted">0 caracteres</span>
                         </div>
@@ -144,7 +144,7 @@
 
                     <!-- PDFs Loaded Section -->
                     <div id="pdfs-container" class="pdfs-container" style="display: none;">
-                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">PDFs
+                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">Archivos
                             Cargados</h4>
                         <div id="pdfs-list" class="pdfs-list"
                             style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
@@ -259,7 +259,7 @@
         </div>
     </div>
 
-    <script type="module" src="js/app.js?v=8"></script>
+    <script type="module" src="js/app.js?v=10"></script>
 </body>
 
 </html>

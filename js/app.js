@@ -1,8 +1,8 @@
-import * as api from './api.js?v=7';
-import * as storage from './storage.js?v=7';
-import * as ui from './ui.js?v=7';
-import * as auth from './auth.js?v=7';
-import * as pdfUtils from './pdf_utils.js?v=7';
+import * as api from './api.js?v=10';
+import * as storage from './storage.js?v=10';
+import * as ui from './ui.js?v=10';
+import * as auth from './auth.js?v=10';
+import * as pdfUtils from './pdf_utils.js?v=10';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -95,8 +95,19 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.toggleLoading(true);
             try {
                 for (let file of files) {
-                    const base64 = await pdfUtils.fileToBase64(file);
-                    const text = await pdfUtils.extractTextFromPDF(file);
+                    let base64;
+                    let text;
+                    if (pdfUtils.isImageFile(file)) {
+                        // Foto -> texto con Pollinations AI
+                        const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
+                        text = await api.imageToText(imageDataUrl);
+                        if (!text.trim()) throw new Error(`No se detectó texto en "${file.name}"`);
+                        // Guardamos el texto extraído (no la foto) para no reprocesarla
+                        base64 = pdfUtils.textToDataUrl(text);
+                    } else {
+                        base64 = await pdfUtils.fileToBase64(file);
+                        text = await pdfUtils.extractTextFromPDF(file);
+                    }
                     
                     let fakeId = Date.now() + Math.random();
                     if (currentExam && !currentExam.isLocal) {
@@ -112,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addPDFToList(file.name, text, fakeId);
                 }
             } catch (error) {
-                alert('Error al leer el PDF: ' + error.message);
+                alert('Error al leer el archivo: ' + error.message);
                 console.error(error);
             } finally {
                 ui.toggleLoading(false);
@@ -240,9 +251,15 @@ async function selectExam(exam) {
         try {
             const pdfs = await storage.loadPdfsForExam(currentUser.id, exam.id);
             for (let p of pdfs) {
-                const blob = pdfUtils.base64ToBlob(p.value, 'application/pdf');
-                const file = new File([blob], p.name, { type: 'application/pdf' });
-                const text = await pdfUtils.extractTextFromPDF(file);
+                let text;
+                if (typeof p.value === 'string' && p.value.startsWith('data:text/plain')) {
+                    // Texto extraído de una foto
+                    text = pdfUtils.dataUrlToText(p.value);
+                } else {
+                    const blob = pdfUtils.base64ToBlob(p.value, 'application/pdf');
+                    const file = new File([blob], p.name, { type: 'application/pdf' });
+                    text = await pdfUtils.extractTextFromPDF(file);
+                }
                 addPDFToList(p.name, text, p.id);
             }
         } catch (err) {
@@ -369,7 +386,6 @@ function updateCharCount(e) {
 async function handleTest() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return showCustomAlert('Por favor ingresa un texto para generar el test.');
-    if (text.length > 25000) return showCustomAlert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return showCustomAlert('Selecciona o crea un examen antes de guardar.');
 
     // show modal to pick number of questions (replaces prompt())
@@ -408,7 +424,6 @@ function saveSettings() {
 async function handleSummary() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
-    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -432,7 +447,6 @@ async function handleSummary() {
 async function handleAudioSummary() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
-    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -456,7 +470,6 @@ async function handleAudioSummary() {
 async function handleFlashcards() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto.');
-    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
     ui.toggleLoading(true);
@@ -495,7 +508,6 @@ function explainFlashcard(text, card) {
 function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
-    if (text.length > 25000) return alert('El texto es demasiado largo (~25000 caracteres máx). Por favor, redúcelo.');
 
     currentContext = text;
     chatHistory = []; // Reset history on new chat start
@@ -615,8 +627,8 @@ function updatePDFListUI() {
     container.style.display = 'block';
     list.innerHTML = loadedPDFs.map(pdf => `
         <div class="pdf-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background-color: #ffffff; border-radius: var(--radius-sm); font-size: 0.85rem;">
-            <span style="flex: 1; word-break: break-word;">📄 ${escapeHtml(pdf.name)}</span>
-            <button class="btn-remove-pdf" data-pdf-id="${pdf.id}" style="padding: 0.25rem 0.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Eliminar PDF">✕</button>
+            <span style="flex: 1; word-break: break-word;">${/\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(pdf.name) ? '🖼️' : '📄'} ${escapeHtml(pdf.name)}</span>
+            <button class="btn-remove-pdf" data-pdf-id="${pdf.id}" style="padding: 0.25rem 0.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Eliminar archivo">✕</button>
         </div>
     `).join('');
     

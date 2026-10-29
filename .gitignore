@@ -1,0 +1,6 @@
+# Vercel
+.vercel
+
+# Variables de entorno locales (nunca subir claves)
+.env
+.env*.local
