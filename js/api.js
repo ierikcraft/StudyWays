@@ -1,7 +1,7 @@
 // js/api.js
 
-// URL de Pollinations AI (compatible con formato OpenAI, gratuita y con soporte CORS para navegador)
-const BASE_URL = 'https://text.pollinations.ai/openai';
+// Endpoint serverless de Vercel (SambaNova Cloud como principal + fallback garantizado a Pollinations)
+const CHAT_ENDPOINT = '/api/chat';
 
 // --- TUS PROMPTS ORIGINALES INTACTOS ---
 const SYSTEM_PROMPT_SUMMARY = `You are a helpful study assistant. Your task is to summarize the provided text clearly and concisely. formatting with markdown`;
@@ -38,34 +38,62 @@ V: <correct answer>
 Repeat for every question. Do NOT include explanations or headers.`;
 
 /**
- * Llama a la API de IA (Pollinations OpenAI endpoint).
+ * Llama a la API de IA (vía serverless /api/chat: SambaNova Cloud prioritario con fallback a Pollinations).
  */
 async function callAI(messages) {
     try {
-        const response = await fetch(BASE_URL, {
+        const response = await fetch(CHAT_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'openai',
                 messages: messages,
-                temperature: 0.5,
-                seed: Math.floor(Math.random() * 1000000)
+                temperature: 0.5
             })
         });
 
         if (!response.ok) {
-            const errText = await response.text().catch(() => null);
-            throw new Error(`API Error ${response.status}: ${errText || response.statusText}`);
+            // Si /api/chat devuelve 404 (ej. en desarrollo local sin Vercel), fallback directo a Pollinations
+            if (response.status === 404) {
+                return await directFallbackAI(messages);
+            }
+            const errData = await response.json().catch(() => null);
+            throw new Error(errData?.error || `Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        return data.choices?.[0]?.message?.content || '';
+        return data.content || '';
     } catch (error) {
+        // En caso de fallo de red al endpoint local, intentar fallback directo
+        if (error.message && error.message.includes('Failed to fetch')) {
+            try {
+                return await directFallbackAI(messages);
+            } catch (fallbackErr) {
+                console.error('Fallback también falló:', fallbackErr);
+            }
+        }
         console.error('API Call Failed:', error);
         throw error;
     }
+}
+
+async function directFallbackAI(messages) {
+    const res = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer sk_8S7OMOdZw5eolrik71nWiQ6RlNcX7QOV'
+        },
+        body: JSON.stringify({
+            model: 'openai/gpt-5.4-nano',
+            messages,
+            temperature: 0.5
+        })
+    });
+    if (!res.ok) throw new Error(`Error de IA ${res.status}`);
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content || '';
 }
 
 // --- Imagen a texto (solo para fotos) ---
