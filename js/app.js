@@ -85,6 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('input-text').addEventListener('input', updateCharCount);
 
     // PDF Upload
+    const btnClearAllPdfs = document.getElementById('btn-clear-all-pdfs');
+    if (btnClearAllPdfs) {
+        btnClearAllPdfs.addEventListener('click', clearAllLoadedPDFs);
+    }
+
     const btnUpload = document.getElementById('btn-upload-pdf');
     const fileInput = document.getElementById('pdf-upload');
 
@@ -661,26 +666,54 @@ function updateTextAreaFromPDFs() {
     ui.elements.inputArea.dispatchEvent(new Event('input'));
 }
 
+async function clearAllLoadedPDFs() {
+    if (loadedPDFs.length === 0) return;
+    const idsToRemove = loadedPDFs.map(p => p.id);
+    loadedPDFs = [];
+    updatePDFListUI();
+    updateTextAreaFromPDFs();
+    
+    if (currentUser && currentExam && !currentExam.isLocal) {
+        for (const id of idsToRemove) {
+            try {
+                await storage.removePdfFromExam(currentUser.id, currentExam.id, id);
+            } catch (err) {
+                console.error("Failed to remove PDF from cloud", err);
+            }
+        }
+    }
+}
+
 function updatePDFListUI() {
     const container = document.getElementById('pdfs-container');
     const list = document.getElementById('pdfs-list');
+    const countEl = document.getElementById('pdfs-count');
+    const clearBtn = document.getElementById('btn-clear-all-pdfs');
     
     if (loadedPDFs.length === 0) {
         container.style.display = 'none';
+        if (list) list.innerHTML = '';
         return;
     }
     
-    container.style.display = 'block';
+    container.style.display = 'flex';
+    if (countEl) countEl.textContent = loadedPDFs.length;
+    if (clearBtn) clearBtn.style.display = loadedPDFs.length > 1 ? 'block' : 'none';
+    
     list.innerHTML = loadedPDFs.map(pdf => `
-        <div class="pdf-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background-color: #ffffff; border-radius: var(--radius-sm); font-size: 0.85rem;">
-            <span style="flex: 1; word-break: break-word;">${/\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(pdf.name) ? '🖼️' : '📄'} ${escapeHtml(pdf.name)}</span>
-            <button class="btn-remove-pdf" data-pdf-id="${pdf.id}" style="padding: 0.25rem 0.5rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Eliminar archivo">✕</button>
+        <div class="pdf-item">
+            <span class="pdf-item-name" title="${escapeHtml(pdf.name)}">
+                <span class="pdf-item-icon">${/\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(pdf.name) ? '🖼️' : '📄'}</span>
+                <span class="pdf-item-text">${escapeHtml(pdf.name)}</span>
+            </span>
+            <button class="btn-remove-pdf" data-pdf-id="${pdf.id}" type="button" title="Eliminar archivo">✕</button>
         </div>
     `).join('');
     
     // Add event listeners to delete buttons
-    document.querySelectorAll('.btn-remove-pdf').forEach(btn => {
+    list.querySelectorAll('.btn-remove-pdf').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const btnEl = e.target.closest('.btn-remove-pdf');
             const pdfId = btnEl.getAttribute('data-pdf-id');
             removePDFFromList(pdfId);

@@ -144,10 +144,11 @@
 
                     <!-- PDFs Loaded Section -->
                     <div id="pdfs-container" class="pdfs-container" style="display: none;">
-                        <h4 style="margin: 0.5rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-muted);">Archivos
-                            Cargados</h4>
-                        <div id="pdfs-list" class="pdfs-list"
-                            style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <div class="pdfs-header">
+                            <span class="pdfs-title">Archivos cargados (<span id="pdfs-count">0</span>)</span>
+                            <button id="btn-clear-all-pdfs" class="btn-clear-pdfs" type="button" title="Eliminar todos los archivos" style="display: none;">Limpiar todos</button>
+                        </div>
+                        <div id="pdfs-list" class="pdfs-list">
                             <!-- PDF items injected here -->
                         </div>
                     </div>
