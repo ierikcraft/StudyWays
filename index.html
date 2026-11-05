@@ -1,372 +1,606 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyWays - Tu Asistente de Estudio</title>
-    <link rel="icon" type="image/png" href="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png">
-    <link rel="stylesheet" href="css/styles.css?v=12">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
-</head>
-
-<body>
-    <!-- Splash Screen -->
-    <div id="splash-screen" class="splash-screen">
-        <div class="splash-content">
-            <div class="splash-logo-wrapper">
-                <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays Logo" class="splash-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
-            </div>
-            <h1 class="splash-title">StudyWays</h1>
-            <p class="splash-subtitle">Tu compañero de estudio inteligente</p>
-            <div class="splash-loader">
-                <div class="splash-loader-bar"></div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Si se experimentan problemas descomentas esta linea -->
-    <!-- <div class="site-alert" role="alert">⚠️ StudyWays está experimentando problemas</div> -->
-
-
-
-    <!-- Landing Page -->
-    <div id="landing-page" class="landing-container">
-        <div class="landing-content fade-in-up">
-            <h1 class="landing-title">StudyWays</h1>
-            <p class="landing-subtitle">Tu compañero de estudio inteligente.</p>
-            <div class="landing-features">
-                <div class="feature-item">✨ Resúmenes Instantáneos</div>
-                <div class="feature-item">🗂️ Flashcards Automáticas</div>
-                <div class="feature-item">💬 Asistente Q&A</div>
-            </div>
-            <button id="btn-login" class="btn-login">
-                Entrar con ErikAccount
-            </button>
-            <div style="margin-top: 2rem;">
-                <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" style="color: white; text-decoration: none; opacity: 0.8; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-                    <svg height="24" width="24" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-                    Ver en GitHub
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notebook Dashboard (prototipo) -->
-    <div id="notebook-dashboard" class="dashboard-container hidden">
-        <header class="dashboard-header">
-            <div class="header-brand">
-                <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays" class="brand-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
-                <h1>Mis Cuadernos</h1>
-            </div>
-            <div class="user-profile-widget" style="display: flex; align-items: center; gap: 0.75rem;">
-                <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" class="btn-text" title="Ver código en GitHub" style="display: flex; align-items: center; color: var(--text-main);">
-                    <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-                </a>
-                <span id="dash-user-name">Usuario</span>
-                <button id="dash-btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
-            </div>
-        </header>
-        <div class="notebooks-grid" id="notebooks-grid">
-            <!-- Notebook cards injected here -->
-            <div class="notebook-card new-notebook" id="btn-create-notebook">
-                <span class="icon">➕</span>
-                <span>Nuevo Cuaderno</span>
-            </div>
-        </div>
-    </div>
-
-    <div id="app-container" class="app-container hidden">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo" style="cursor: pointer;" id="btn-back-dashboard">
-                <h2>🔙 Volver</h2>
-            </div>
-            <div class="exams-container">
-                <h3 style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
-                    <span>Exámenes</span>
-                    <button id="btn-create-exam" class="btn secondary" title="Crear examen"
-                        style="font-size:0.85rem; padding:0.25rem 0.6rem;">➕ Nuevo</button>
-                </h3>
-                <div id="exams-list" class="history-list">
-                    <!-- Exams will be injected here -->
-                </div>
-            </div>
-
-            <div class="history-container">
-                <h3>Historial</h3>
-                <div id="history-list" class="history-list">
-                    <!-- History items will be injected here -->
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-bar">
-                <div class="header-brand">
-                    <button id="btn-top-back" class="btn-top-back" type="button" title="Volver a mis cuadernos">
-                        <span class="back-arrow">←</span>
-                        <span class="back-text">Volver</span>
-                    </button>
-                    <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays" class="brand-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
-                    <h1>StudyWays</h1>
-                </div>
-                <div class="user-profile">
-                    <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" class="btn-text header-github-btn" title="Ver código en GitHub">
-                        <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-                    </a>
-                    <span id="user-name" class="header-user-name">Usuario</span>
-                    <div class="avatar" id="user-avatar">👤</div>
-                    <button id="btn-delete-all" class="btn-text header-delete-btn" title="Eliminar todas las libretas">🗑️</button>
-                    <button id="btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
-                </div>
-            </header>
-
-            <!-- Selection Indicator Sub-header -->
-            <div class="active-selection-bar" id="active-selection-bar">
-                <div class="selection-current-exam" id="selection-exam-info">
-                    <span class="selection-tag">Cuaderno:</span>
-                    <span class="active-exam-pill" id="active-exam-pill">
-                        <span id="active-exam-icon">📘</span>
-                        <span id="active-exam-title">Sin libreta seleccionada</span>
-                    </span>
-                </div>
-                <div class="selection-current-tab" id="selection-tab-info">
-                    <span class="tab-indicator-badge" id="active-tab-indicator">📄 Fuentes</span>
-                </div>
-            </div>
-
-            <div class="workspace">
-                <!-- Input Section -->
-                <section class="input-section card">
-                    <div class="input-header">
-                        <h3>Texto de Entrada</h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="file" id="pdf-upload" accept=".pdf,image/*" multiple class="hidden">
-                            <button id="btn-upload-pdf" class="btn secondary"
-                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDFs o fotos">
-                                📄 Subir PDFs / Fotos
-                            </button>
-                            <span id="char-count" class="text-muted">0 caracteres</span>
-                        </div>
-                    </div>
-
-                    <!-- PDFs Loaded Section -->
-                    <div id="pdfs-container" class="pdfs-container" style="display: none;">
-                        <div class="pdfs-header">
-                            <span class="pdfs-title">Archivos cargados (<span id="pdfs-count">0</span>)</span>
-                            <button id="btn-clear-all-pdfs" class="btn-clear-pdfs" type="button" title="Eliminar todos los archivos" style="display: none;">Limpiar todos</button>
-                        </div>
-                        <div id="pdfs-list" class="pdfs-list">
-                            <!-- PDF items injected here -->
-                        </div>
-                    </div>
-
-                    <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
-                    <div class="mobile-sources-quick-action">
-                        <button id="m-btn-to-generate" class="btn primary full-width" type="button">
-                            Continuar a Generar ✨ →
-                        </button>
-                    </div>
-                    <div class="action-buttons">
-                        <button id="btn-summary" class="btn primary">
-                            ✨ Resumen
-                        </button>
-                        <button id="btn-audio-summary" class="btn secondary">
-                            🔊 Audio
-                        </button>
-                        <div class="btn-group">
-                            <button id="btn-flashcards" class="btn secondary">
-                                🗂️ Flashcards
-                            </button>
-                            <button id="btn-flashcards-settings" class="btn icon-only" title="Configurar cantidad">
-                                ✏️
-                            </button>
-                        </div>
-                        <button id="btn-chat" class="btn secondary">
-                            💬 Chat
-                        </button>
-                        <button id="btn-test" class="btn secondary">
-                            🧪 Test
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Mobile Generator Section (Visible in Generar tab on mobile) -->
-                <section class="mobile-generate-section card" id="mobile-generate-section">
-                    <div class="mobile-generate-header">
-                        <h3>¿Qué quieres crear?</h3>
-                        <p class="text-muted">Elige una herramienta inteligente para estudiar</p>
-                    </div>
-
-                    <div class="mobile-tools-grid">
-                        <button class="mobile-tool-card" id="m-btn-summary" type="button">
-                            <div class="tool-icon-box" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;">✨</div>
-                            <div class="tool-info">
-                                <h4>Resumen</h4>
-                                <p>Síntesis estructurada y conceptos clave</p>
-                            </div>
-                            <span class="tool-arrow">→</span>
-                        </button>
-
-                        <button class="mobile-tool-card" id="m-btn-audio" type="button">
-                            <div class="tool-icon-box" style="background: rgba(236, 72, 153, 0.12); color: #ec4899;">🔊</div>
-                            <div class="tool-info">
-                                <h4>Audio Resumen</h4>
-                                <p>Resumen narrado con voz interactiva</p>
-                            </div>
-                            <span class="tool-arrow">→</span>
-                        </button>
-
-                        <div class="mobile-tool-card tool-with-settings">
-                            <button class="tool-clickable" id="m-btn-flashcards" type="button">
-                                <div class="tool-icon-box" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">🗂️</div>
-                                <div class="tool-info">
-                                    <h4>Flashcards</h4>
-                                    <p>Tarjetas interactivas (<span id="m-flashcards-count-label">5 tarjetas</span>)</p>
-                                </div>
-                            </button>
-                            <button class="tool-setting-btn" id="m-btn-flashcards-settings" type="button" title="Configurar cantidad">✏️</button>
-                        </div>
-
-                        <button class="mobile-tool-card" id="m-btn-test" type="button">
-                            <div class="tool-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">🧪</div>
-                            <div class="tool-info">
-                                <h4>Test de Estudio</h4>
-                                <p>Preguntas tipo examen con corrección</p>
-                            </div>
-                            <span class="tool-arrow">→</span>
-                        </button>
-
-                        <button class="mobile-tool-card" id="m-btn-chat" type="button">
-                            <div class="tool-icon-box" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">💬</div>
-                            <div class="tool-info">
-                                <h4>Chat con tus Apuntes</h4>
-                                <p>Pregunta dudas a la IA con contexto</p>
-                            </div>
-                            <span class="tool-arrow">→</span>
-                        </button>
-                    </div>
-
-                    <div class="mobile-generate-footer">
-                        <button id="m-btn-go-sources" class="btn secondary full-width" type="button">
-                            ✏️ Editar o agregar apuntes en Fuentes
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Output Section -->
-                <section class="output-section card">
-                    <div class="output-header">
-                        <h3 id="content-title">Resultado</h3>
-                    </div>
-
-                    <div id="loading" class="loading-state hidden">
-                        <div class="spinner"></div>
-                        <p>Analizando texto con IA...</p>
-                    </div>
-
-                    <div id="output-content" class="output-content">
-                        <div class="placeholder-state">
-                            <p>Los resultados aparecerán aquí</p>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-
-        <!-- Mobile Bottom Navigation Bar -->
-        <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
-            <button class="mobile-nav-btn" data-tab="history" id="nav-btn-history" type="button">
-                <span class="nav-icon">📚</span>
-                <span class="nav-label">Historial</span>
-            </button>
-            <button class="mobile-nav-btn active" data-tab="sources" id="nav-btn-sources" type="button">
-                <span class="nav-icon">📄</span>
-                <span class="nav-label">Fuentes</span>
-            </button>
-            <button class="mobile-nav-btn" data-tab="generate" id="nav-btn-generate" type="button">
-                <span class="nav-icon">✨</span>
-                <span class="nav-label">Generar</span>
-            </button>
-            <button class="mobile-nav-btn" data-tab="test" id="nav-btn-test" type="button">
-                <span class="nav-icon">🎯</span>
-                <span class="nav-label">Probar</span>
-            </button>
-        </nav>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content fade-in">
-            <div class="modal-header">
-                <h3>Configuración de Flashcards</h3>
-                <button id="close-modal" class="close-btn">×</button>
-            </div>
-            <div class="modal-body">
-                <label for="flashcard-count">Cantidad de tarjetas:</label>
-                <div class="range-control">
-                    <input type="range" id="flashcard-count" min="3" max="20" value="5">
-                    <span id="flashcard-count-value">5</span>
-                </div>
-                <button id="save-settings" class="btn primary full-width">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create Exam Modal -->
-    <div id="create-exam-modal" class="modal hidden">
-        <div class="modal-content fade-in">
-            <div class="modal-header">
-                <h3>Crear examen</h3>
-                <button id="close-create-exam" class="close-btn">×</button>
-            </div>
-            <div class="modal-body">
-                <label for="exam-emoji">Emoji (ej. 📘)</label>
-                <input id="exam-emoji" type="text" maxlength="2" placeholder="📘"
-                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-
-                <label for="exam-title" style="margin-top:0.75rem; display:block;">Título</label>
-                <input id="exam-title" type="text" placeholder="Nombre del examen"
-                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-
-                <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
-                    <button id="save-exam" class="btn primary">Crear</button>
-                    <button id="cancel-exam" class="btn secondary">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Test Count Modal -->
-    <div id="test-count-modal" class="modal hidden">
-        <div class="modal-content fade-in">
-            <div class="modal-header">
-                <h3>¿Cuántas preguntas?</h3>
-                <button id="close-test-count" class="close-btn">×</button>
-            </div>
-            <div class="modal-body">
-                <label for="test-count-input">Número de preguntas (1-50)</label>
-                <input id="test-count-input" type="number" min="1" max="50" value="5"
-                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
-                    <button id="start-test" class="btn primary">Comenzar</button>
-                    <button id="cancel-test" class="btn secondary">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="js/app.js?v=12"></script>
-</body>
-
-</html>
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>StudyWays - Tu Asistente de Estudio</title>
+
+    <link rel="icon" type="image/png" href="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png">
+
+    <link rel="stylesheet" href="css/styles.css?v=12">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    </script>
+
+</head>
+
+<body>
+
+    <!-- Splash Screen -->
+
+    <div id="splash-screen" class="splash-screen">
+
+        <div class="splash-content">
+
+            <div class="splash-logo-wrapper">
+
+                <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays Logo" class="splash-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
+
+            </div>
+
+            <h1 class="splash-title">StudyWays</h1>
+
+            <p class="splash-subtitle">Tu compañero de estudio inteligente</p>
+
+            <div class="splash-loader">
+
+                <div class="splash-loader-bar"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Si se experimentan problemas descomentas esta linea -->
+
+    <!-- <div class="site-alert" role="alert">⚠️ StudyWays está experimentando problemas</div> -->
+
+    <!-- Landing Page -->
+
+    <div id="landing-page" class="landing-container">
+
+        <div class="landing-content fade-in-up">
+
+            <h1 class="landing-title">StudyWays</h1>
+
+            <p class="landing-subtitle">Tu compañero de estudio inteligente.</p>
+
+            <div class="landing-features">
+
+                <div class="feature-item">✨ Resúmenes Instantáneos</div>
+
+                <div class="feature-item">🗂️ Flashcards Automáticas</div>
+
+                <div class="feature-item">💬 Asistente Q&A</div>
+
+            </div>
+
+            <button id="btn-login" class="btn-login">
+
+                Entrar con ErikAccount
+
+            </button>
+
+            <div style="margin-top: 2rem;">
+
+                <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" style="color: white; text-decoration: none; opacity: 0.8; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+
+                    <svg height="24" width="24" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+
+                    Ver en GitHub
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Notebook Dashboard (prototipo) -->
+
+    <div id="notebook-dashboard" class="dashboard-container hidden">
+
+        <header class="dashboard-header">
+
+            <div class="header-brand">
+
+                <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays" class="brand-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
+
+                <h1>Mis Cuadernos</h1>
+
+            </div>
+
+            <div class="user-profile-widget" style="display: flex; align-items: center; gap: 0.75rem;">
+
+                <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" class="btn-text" title="Ver código en GitHub" style="display: flex; align-items: center; color: var(--text-main);">
+
+                    <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+
+                </a>
+
+                <span id="dash-user-name">Usuario</span>
+
+                <button id="dash-btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
+
+            </div>
+
+        </header>
+
+        <div class="notebooks-grid" id="notebooks-grid">
+
+            <!-- Notebook cards injected here -->
+
+            <div class="notebook-card new-notebook" id="btn-create-notebook">
+
+                <span class="icon">➕</span>
+
+                <span>Nuevo Cuaderno</span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="app-container" class="app-container hidden">
+
+        <!-- Sidebar -->
+
+        <aside class="sidebar">
+
+            <div class="logo" style="cursor: pointer;" id="btn-back-dashboard">
+
+                <h2>🔙 Volver</h2>
+
+            </div>
+
+            <div class="exams-container">
+
+                <h3 style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+
+                    <span>Exámenes</span>
+
+                    <button id="btn-create-exam" class="btn secondary" title="Crear examen"
+
+                        style="font-size:0.85rem; padding:0.25rem 0.6rem;">➕ Nuevo</button>
+
+                </h3>
+
+                <div id="exams-list" class="history-list">
+
+                    <!-- Exams will be injected here -->
+
+                </div>
+
+            </div>
+
+            <div class="history-container">
+
+                <h3>Historial</h3>
+
+                <div id="history-list" class="history-list">
+
+                    <!-- History items will be injected here -->
+
+                </div>
+
+            </div>
+
+        </aside>
+
+        <!-- Main Content -->
+
+        <main class="main-content">
+
+            <header class="top-bar">
+
+                <div class="header-brand">
+
+                    <button id="btn-top-back" class="btn-top-back" type="button" title="Volver a mis cuadernos">
+
+                        <span class="back-arrow">←</span>
+
+                        <span class="back-text">Volver</span>
+
+                    </button>
+
+                    <img src="https://studyways.erikhub.com/source/STUDYWAYS%20FAVICON.png" alt="StudyWays" class="brand-logo" onerror="this.onerror=null; this.src='source/STUDYWAYS%20FAVICON.png'">
+
+                    <h1>StudyWays</h1>
+
+                </div>
+
+                <div class="user-profile">
+
+                    <a href="https://github.com/ierikcraft/StudyWays" target="_blank" rel="noopener noreferrer" class="btn-text header-github-btn" title="Ver código en GitHub">
+
+                        <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+
+                    </a>
+
+                    <span id="user-name" class="header-user-name">Usuario</span>
+
+                    <div class="avatar" id="user-avatar">👤</div>
+
+                    <button id="btn-delete-all" class="btn-text header-delete-btn" title="Eliminar todas las libretas">🗑️</button>
+
+                    <button id="btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
+
+                </div>
+
+            </header>
+
+            <!-- Selection Indicator Sub-header -->
+
+            <div class="active-selection-bar" id="active-selection-bar">
+
+                <div class="selection-current-exam" id="selection-exam-info">
+
+                    <span class="selection-tag">Cuaderno:</span>
+
+                    <span class="active-exam-pill" id="active-exam-pill">
+
+                        <span id="active-exam-icon">📘</span>
+
+                        <span id="active-exam-title">Sin libreta seleccionada</span>
+
+                    </span>
+
+                </div>
+
+                <div class="selection-current-tab" id="selection-tab-info">
+
+                    <span class="tab-indicator-badge" id="active-tab-indicator">📄 Fuentes</span>
+
+                </div>
+
+            </div>
+
+            <div class="workspace">
+
+                <!-- Input Section -->
+
+                <section class="input-section card">
+
+                    <div class="input-header">
+
+                        <h3>Texto de Entrada</h3>
+
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+
+                            <input type="file" id="pdf-upload" accept=".pdf,image/*" multiple class="hidden">
+
+                            <button id="btn-upload-pdf" class="btn secondary"
+
+                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;" title="Subir PDFs o fotos">
+
+                                📄 Subir PDFs / Fotos
+
+                            </button>
+
+                            <span id="char-count" class="text-muted">0 caracteres</span>
+
+                        </div>
+
+                    </div>
+
+                    <!-- PDFs Loaded Section -->
+
+                    <div id="pdfs-container" class="pdfs-container" style="display: none;">
+
+                        <div class="pdfs-header">
+
+                            <span class="pdfs-title">Archivos cargados (<span id="pdfs-count">0</span>)</span>
+
+                            <button id="btn-clear-all-pdfs" class="btn-clear-pdfs" type="button" title="Eliminar todos los archivos" style="display: none;">Limpiar todos</button>
+
+                        </div>
+
+                        <div id="pdfs-list" class="pdfs-list">
+
+                            <!-- PDF items injected here -->
+
+                        </div>
+
+                    </div>
+
+                    <textarea id="input-text" placeholder="Pega tu texto aquí (artículo, notas, apuntes)..."></textarea>
+
+                    <div class="mobile-sources-quick-action">
+
+                        <button id="m-btn-to-generate" class="btn primary full-width" type="button">
+
+                            Continuar a Generar ✨ →
+
+                        </button>
+
+                    </div>
+
+                    <div class="action-buttons">
+
+                        <button id="btn-summary" class="btn primary">
+
+                            ✨ Resumen
+
+                        </button>
+
+                        <button id="btn-audio-summary" class="btn secondary">
+
+                            🔊 Audio
+
+                        </button>
+
+                        <div class="btn-group">
+
+                            <button id="btn-flashcards" class="btn secondary">
+
+                                🗂️ Flashcards
+
+                            </button>
+
+                            <button id="btn-flashcards-settings" class="btn icon-only" title="Configurar cantidad">
+
+                                ✏️
+
+                            </button>
+
+                        </div>
+
+                        <button id="btn-chat" class="btn secondary">
+
+                            💬 Chat
+
+                        </button>
+
+                        <button id="btn-test" class="btn secondary">
+
+                            🧪 Test
+
+                        </button>
+
+                    </div>
+
+                </section>
+
+                <!-- Output Section -->
+
+                <section class="output-section card">
+                    <!-- Toolbar for Generar tab on mobile/tablet -->
+                    <div class="generate-bar-container" id="generate-toolbar">
+                        <div class="action-buttons generate-buttons">
+                            <button id="btn-summary-gen" class="btn primary" type="button">
+                                ✨ Resumen
+                            </button>
+                            <button id="btn-audio-summary-gen" class="btn secondary" type="button">
+                                🔊 Audio
+                            </button>
+                            <div class="btn-group">
+                                <button id="btn-flashcards-gen" class="btn secondary" type="button">
+                                    🗂️ Flashcards
+                                </button>
+                                <button id="btn-flashcards-settings-gen" class="btn icon-only" type="button" title="Configurar cantidad">
+                                    ✏️
+                                </button>
+                            </div>
+                            <button id="btn-chat-gen" class="btn secondary" type="button">
+                                💬 Chat
+                            </button>
+                            <button id="btn-test-gen" class="btn secondary" type="button">
+                                🧪 Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="output-header">
+
+                        <h3 id="content-title">Resultado</h3>
+
+                    </div>
+
+                    <div id="loading" class="loading-state hidden">
+
+                        <div class="spinner"></div>
+
+                        <p>Analizando texto con IA...</p>
+
+                    </div>
+
+                    <div id="output-content" class="output-content">
+
+                        <div class="placeholder-state">
+
+                            <p>Los resultados aparecerán aquí</p>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </main>
+
+        <!-- Mobile Bottom Navigation Bar -->
+
+        <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+            <button class="mobile-nav-btn active" data-tab="sources" id="nav-btn-sources" type="button">
+                <span class="nav-icon">📄</span>
+                <span class="nav-label">Fuentes</span>
+            </button>
+            <button class="mobile-nav-btn" data-tab="generate" id="nav-btn-generate" type="button">
+                <span class="nav-icon">✨</span>
+                <span class="nav-label">Generar</span>
+            </button>
+            <button class="mobile-nav-btn" data-tab="history" id="nav-btn-history" type="button">
+                <span class="nav-icon">📚</span>
+                <span class="nav-label">Historial</span>
+            </button>
+        </nav>
+
+    </div>
+
+        <!-- Upload Progress Modal Overlay -->
+        <div id="upload-progress-overlay" class="upload-progress-overlay hidden">
+            <div class="upload-progress-card">
+                <!-- Animated Icon / Scanner -->
+                <div class="upload-anim-container">
+                    <div class="upload-glow-ring"></div>
+                    <div class="upload-icon-wrapper">
+                        <span class="upload-anim-icon" id="upload-anim-icon">📄</span>
+                    </div>
+                    <div class="upload-scanner-beam"></div>
+                </div>
+
+                <h3 class="upload-progress-title" id="upload-progress-title">Subiendo y analizando archivos...</h3>
+                <p class="upload-file-name" id="upload-file-name">Iniciando procesamiento...</p>
+
+                <!-- Progress Bar Container -->
+                <div class="upload-bar-wrapper">
+                    <div class="upload-bar-track">
+                        <div class="upload-bar-fill" id="upload-bar-fill">
+                            <div class="upload-bar-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="upload-bar-meta">
+                        <span id="upload-progress-fraction">0 / 0</span>
+                        <span id="upload-progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <!-- Rotating Fun Tips / Status messages -->
+                <div class="upload-tip-box">
+                    <span class="upload-tip-icon">💡</span>
+                    <span class="upload-tip-text" id="upload-tip-text">Extrayendo texto y preparando tus apuntes...</span>
+                </div>
+            </div>
+        </div>
+
+    <!-- Settings Modal -->
+
+    <div id="settings-modal" class="modal hidden">
+
+        <div class="modal-content fade-in">
+
+            <div class="modal-header">
+
+                <h3>Configuración de Flashcards</h3>
+
+                <button id="close-modal" class="close-btn">×</button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <label for="flashcard-count">Cantidad de tarjetas:</label>
+
+                <div class="range-control">
+
+                    <input type="range" id="flashcard-count" min="3" max="20" value="5">
+
+                    <span id="flashcard-count-value">5</span>
+
+                </div>
+
+                <button id="save-settings" class="btn primary full-width">Guardar</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Create Exam Modal -->
+
+    <div id="create-exam-modal" class="modal hidden">
+
+        <div class="modal-content fade-in">
+
+            <div class="modal-header">
+
+                <h3>Crear examen</h3>
+
+                <button id="close-create-exam" class="close-btn">×</button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <label for="exam-emoji">Emoji (ej. 📘)</label>
+
+                <input id="exam-emoji" type="text" maxlength="2" placeholder="📘"
+
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+
+                <label for="exam-title" style="margin-top:0.75rem; display:block;">Título</label>
+
+                <input id="exam-title" type="text" placeholder="Nombre del examen"
+
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+
+                <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+
+                    <button id="save-exam" class="btn primary">Crear</button>
+
+                    <button id="cancel-exam" class="btn secondary">Cancelar</button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Test Count Modal -->
+
+    <div id="test-count-modal" class="modal hidden">
+
+        <div class="modal-content fade-in">
+
+            <div class="modal-header">
+
+                <h3>¿Cuántas preguntas?</h3>
+
+                <button id="close-test-count" class="close-btn">×</button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <label for="test-count-input">Número de preguntas (1-50)</label>
+
+                <input id="test-count-input" type="number" min="1" max="50" value="5"
+
+                    style="width:100%; padding:0.5rem; margin-top:0.25rem; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+
+                <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+
+                    <button id="start-test" class="btn primary">Comenzar</button>
+
+                    <button id="cancel-test" class="btn secondary">Cancelar</button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script type="module" src="js/app.js?v=12"></script>
+
+</body>
+
+</html>
+

@@ -45,6 +45,116 @@ function initSplashScreen() {
     }
 }
 
+
+const uploadProgress = {
+    overlay: null,
+    barFill: null,
+    percentText: null,
+    fractionText: null,
+    titleText: null,
+    fileNameText: null,
+    tipText: null,
+    iconEl: null,
+    tipInterval: null,
+    iconInterval: null,
+    tips: [
+        "Analizando apuntes con visión e inteligencia artificial...",
+        "Extrayendo texto y fórmulas de tus fotos...",
+        "Reconociendo caligrafía y ordenando párrafos...",
+        "Tip: Podrás generar flashcards y tests automáticos.",
+        "Tip: El audio resumen lee tus lecciones con voz interactiva.",
+        "Casi listo, afinando los últimos detalles...",
+        "Preparando tu texto para estudiar a tope 🚀"
+    ],
+    icons: ["📄", "📸", "🔍", "🧠", "⚡", "✨"],
+
+    init() {
+        this.overlay = document.getElementById('upload-progress-overlay');
+        this.barFill = document.getElementById('upload-bar-fill');
+        this.percentText = document.getElementById('upload-progress-percent');
+        this.fractionText = document.getElementById('upload-progress-fraction');
+        this.titleText = document.getElementById('upload-progress-title');
+        this.fileNameText = document.getElementById('upload-file-name');
+        this.tipText = document.getElementById('upload-tip-text');
+        this.iconEl = document.getElementById('upload-anim-icon');
+    },
+
+    start(totalFiles) {
+        if (!this.overlay) this.init();
+        if (!this.overlay) return;
+
+        this.titleText.textContent = totalFiles === 1 
+            ? "Subiendo y analizando archivo..." 
+            : `Subiendo ${totalFiles} archivos...`;
+        this.fileNameText.textContent = "Iniciando análisis...";
+        this.barFill.style.width = '6%';
+        this.barFill.style.background = '';
+        this.percentText.textContent = '6%';
+        this.fractionText.textContent = `0 / ${totalFiles}`;
+        this.iconEl.textContent = '📄';
+
+        let tipIdx = 0;
+        this.tipText.textContent = this.tips[0];
+        clearInterval(this.tipInterval);
+        this.tipInterval = setInterval(() => {
+            tipIdx = (tipIdx + 1) % this.tips.length;
+            this.tipText.style.opacity = '0';
+            this.tipText.style.transform = 'translateY(4px)';
+            setTimeout(() => {
+                this.tipText.textContent = this.tips[tipIdx];
+                this.tipText.style.opacity = '1';
+                this.tipText.style.transform = 'translateY(0)';
+            }, 250);
+        }, 3000);
+
+        let iconIdx = 0;
+        clearInterval(this.iconInterval);
+        this.iconInterval = setInterval(() => {
+            iconIdx = (iconIdx + 1) % this.icons.length;
+            this.iconEl.textContent = this.icons[iconIdx];
+        }, 1200);
+
+        this.overlay.classList.remove('hidden');
+    },
+
+    setFileInProcess(fileName, currentIdx, totalFiles) {
+        if (!this.overlay) return;
+        this.fileNameText.textContent = `Procesando: ${fileName}`;
+        const basePercent = Math.max(6, Math.round((currentIdx / totalFiles) * 100));
+        this.barFill.style.width = `${basePercent}%`;
+        this.percentText.textContent = `${basePercent}%`;
+        this.fractionText.textContent = `${currentIdx} / ${totalFiles}`;
+    },
+
+    update(doneCount, totalFiles) {
+        if (!this.overlay) return;
+        const percent = Math.min(100, Math.max(6, Math.round((doneCount / totalFiles) * 100)));
+        this.barFill.style.width = `${percent}%`;
+        this.percentText.textContent = `${percent}%`;
+        this.fractionText.textContent = `${doneCount} / ${totalFiles}`;
+    },
+
+    async finish(totalFiles, successCount) {
+        if (!this.overlay) return;
+        clearInterval(this.tipInterval);
+        clearInterval(this.iconInterval);
+
+        this.barFill.style.width = '100%';
+        this.percentText.textContent = '100%';
+        this.fractionText.textContent = `${totalFiles} / ${totalFiles}`;
+        this.iconEl.textContent = '✅';
+        this.barFill.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+        this.titleText.textContent = successCount === 1 
+            ? "¡Archivo procesado con éxito!" 
+            : `¡${successCount} archivos listos para estudiar!`;
+        this.fileNameText.textContent = "Extracción completada";
+        this.tipText.textContent = "✨ Apuntes cargados. ¡Ya puedes crear resúmenes o tests!";
+
+        await new Promise(r => setTimeout(r, 850));
+        this.overlay.classList.add('hidden');
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initSplashScreen();
     // ErikAI Welcome popup
@@ -96,31 +206,21 @@ document.addEventListener('DOMContentLoaded', () => {
     btnUpload.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files || []);
-        // Reset input enseguida para poder volver a elegir los mismos archivos
         fileInput.value = '';
         if (files.length === 0) return;
 
-        const loadingText = document.querySelector('#loading p');
-        const originalLoadingText = loadingText ? loadingText.textContent : '';
         let done = 0;
-        const setProgress = () => {
-            if (loadingText) loadingText.textContent = `Procesando archivos... ${done}/${files.length}`;
-        };
+        uploadProgress.start(files.length);
 
-        ui.toggleLoading(true);
-        setProgress();
-
-        // Procesa cada archivo por separado: si uno falla, los demás siguen
-        const processFile = async (file) => {
+        const processFile = async (file, index) => {
+            uploadProgress.setFileInProcess(file.name, done, files.length);
             try {
                 let base64;
                 let text;
                 if (pdfUtils.isImageFile(file)) {
-                    // Foto -> texto con Pollinations AI (vía /api/vision)
                     const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
                     text = await api.imageToText(imageDataUrl);
                     if (!text.trim()) throw new Error('no se detectó texto');
-                    // Guardamos el texto extraído (no la foto) para no reprocesarla
                     base64 = pdfUtils.textToDataUrl(text);
                 } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
                     base64 = await pdfUtils.fileToBase64(file);
@@ -145,27 +245,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { ok: false, name: file.name, error: err.message || String(err) };
             } finally {
                 done++;
-                setProgress();
+                uploadProgress.update(done, files.length);
             }
         };
 
         try {
             const results = await runWithConcurrency(files, 3, processFile);
 
-            // Se añaden en el mismo orden en que se seleccionaron
-            results.filter(r => r.ok).forEach(r => addPDFToList(r.name, r.text, r.id));
+            const successResults = results.filter(r => r.ok);
+            successResults.forEach(r => addPDFToList(r.name, r.text, r.id));
+
+            await uploadProgress.finish(files.length, successResults.length);
 
             const failed = results.filter(r => !r.ok);
             if (failed.length) {
                 showCustomAlert(
-                    `No se pudieron leer ${failed.length} de ${files.length} archivo(s):\n\n` +
-                    failed.map(r => `• ${r.name}: ${r.error}`).join('\n'),
+                    `No se pudieron leer ${failed.length} de ${files.length} archivo(s):
+
+` +
+                    failed.map(r => `• ${r.name}: ${r.error}`).join('
+'),
                     '⚠️'
                 );
             }
-        } finally {
-            ui.toggleLoading(false);
-            if (loadingText) loadingText.textContent = originalLoadingText;
+        } catch (err) {
+            console.error('Error in batch file upload:', err);
+            await uploadProgress.finish(files.length, 0);
         }
     });
 
@@ -272,6 +377,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mBtnTest) mBtnTest.addEventListener('click', handleTest);
     if (mBtnChat) mBtnChat.addEventListener('click', initializeChat);
     if (mBtnToGenerate) mBtnToGenerate.addEventListener('click', () => switchMobileTab('generate'));
+
+    // Generar toolbar buttons
+    const btnSummaryGen = document.getElementById('btn-summary-gen');
+    const btnAudioGen = document.getElementById('btn-audio-summary-gen');
+    const btnFlashcardsGen = document.getElementById('btn-flashcards-gen');
+    const btnFlashcardsSettingsGen = document.getElementById('btn-flashcards-settings-gen');
+    const btnChatGen = document.getElementById('btn-chat-gen');
+    const btnTestGen = document.getElementById('btn-test-gen');
+
+    if (btnSummaryGen) btnSummaryGen.addEventListener('click', handleSummary);
+    if (btnAudioGen) btnAudioGen.addEventListener('click', handleAudioSummary);
+    if (btnFlashcardsGen) btnFlashcardsGen.addEventListener('click', handleFlashcards);
+    if (btnFlashcardsSettingsGen) btnFlashcardsSettingsGen.addEventListener('click', openSettings);
+    if (btnChatGen) btnChatGen.addEventListener('click', initializeChat);
+    if (btnTestGen) btnTestGen.addEventListener('click', handleTest);
     if (mBtnGoSources) mBtnGoSources.addEventListener('click', () => switchMobileTab('sources'));
 
     // Close modal on outside click
@@ -370,6 +490,9 @@ function switchMobileTab(tab) {
     const container = document.getElementById('app-container');
     if (!container) return;
     
+    // Normalize tab: 'sources' | 'generate' | 'history'
+    if (tab === 'test') tab = 'generate';
+    
     container.classList.remove('mobile-tab-history', 'mobile-tab-sources', 'mobile-tab-generate', 'mobile-tab-test');
     container.classList.add(`mobile-tab-${tab}`);
     
@@ -378,10 +501,9 @@ function switchMobileTab(tab) {
     });
 
     const tabLabels = {
-        'history': '📚 Historial',
         'sources': '📄 Fuentes',
         'generate': '✨ Generar',
-        'test': '🎯 Probar'
+        'history': '📚 Historial'
     };
     const indicator = document.getElementById('active-tab-indicator');
     if (indicator) {
@@ -537,7 +659,7 @@ async function handleSummary() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
-    switchMobileTab('test');
+    switchMobileTab('generate');
     ui.toggleLoading(true);
     try {
         const summary = await api.generateSummary(text);
@@ -561,7 +683,7 @@ async function handleAudioSummary() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
-    switchMobileTab('test');
+    switchMobileTab('generate');
     ui.toggleLoading(true);
     try {
         const audioSummary = await api.generateAudioSummary(text);
@@ -585,7 +707,7 @@ async function handleFlashcards() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
-    switchMobileTab('test');
+    switchMobileTab('generate');
     ui.toggleLoading(true);
     try {
         const cards = await api.generateFlashcards(text, flashcardCount);
@@ -623,7 +745,7 @@ function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
 
-    switchMobileTab('test');
+    switchMobileTab('generate');
     currentContext = text;
     chatHistory = []; // Reset history on new chat start
     ui.renderChatInterface(handleChatMessage);
@@ -661,7 +783,7 @@ async function loadHistory() {
             await loadHistory();
         },
         (session) => {
-            switchMobileTab('test');
+            switchMobileTab('generate');
             ui.elements.inputArea.value = session.originalText;
             if (session.type === 'summary') {
                 ui.renderSummary(session.content);
