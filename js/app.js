@@ -1,8 +1,8 @@
-import * as api from './api.js?v=12';
-import * as storage from './storage.js?v=12';
-import * as ui from './ui.js?v=12';
-import * as auth from './auth.js?v=12';
-import * as pdfUtils from './pdf_utils.js?v=12';
+import * as api from './api.js?v=13';
+import * as storage from './storage.js?v=13';
+import * as ui from './ui.js?v=13';
+import * as auth from './auth.js?v=13';
+import * as pdfUtils from './pdf_utils.js?v=13';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -26,24 +26,11 @@ function initSplashScreen() {
         }, 500);
     };
 
-    // Keep splash visible for at least 1.1s for a smooth branding experience
-    const minDisplayTime = 1100;
-    const startTime = Date.now();
-
-    const onReady = () => {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, minDisplayTime - elapsed);
-        setTimeout(hide, remaining);
-    };
-
-    if (document.readyState === 'complete') {
-        onReady();
-    } else {
-        window.addEventListener('load', onReady);
-        // Safety fallback timeout
-        setTimeout(onReady, 2500);
-    }
+    setTimeout(hide, 800);
 }
+
+// Trigger dismissal timer immediately
+initSplashScreen();
 
 
 const uploadProgress = {
@@ -155,7 +142,7 @@ const uploadProgress = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     initSplashScreen();
     // ErikAI Welcome popup
     const urlParams = new URLSearchParams(window.location.search);
@@ -263,8 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `No se pudieron leer ${failed.length} de ${files.length} archivo(s):
 
 ` +
-                    failed.map(r => `• ${r.name}: ${r.error}`).join('
-'),
+                    failed.map(r => `• ${r.name}: ${r.error}`).join('\n'),
                     '⚠️'
                 );
             }
@@ -402,7 +388,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // showApp already handles showing the notebook dashboard if the user is logged in.
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 
 async function refreshExamsList() {
