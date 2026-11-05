@@ -241,6 +241,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBack = document.getElementById('btn-back-dashboard');
     if (btnBack) btnBack.addEventListener('click', showNotebookDashboard);
 
+    const btnTopBack = document.getElementById('btn-top-back');
+    if (btnTopBack) btnTopBack.addEventListener('click', showNotebookDashboard);
+
+    // Mobile Bottom Navigation
+    const navHistory = document.getElementById('nav-btn-history');
+    const navSources = document.getElementById('nav-btn-sources');
+    const navGenerate = document.getElementById('nav-btn-generate');
+    const navTest = document.getElementById('nav-btn-test');
+
+    if (navHistory) navHistory.addEventListener('click', () => switchMobileTab('history'));
+    if (navSources) navSources.addEventListener('click', () => switchMobileTab('sources'));
+    if (navGenerate) navGenerate.addEventListener('click', () => switchMobileTab('generate'));
+    if (navTest) navTest.addEventListener('click', () => switchMobileTab('test'));
+
+    // Mobile Generator Tools
+    const mBtnSummary = document.getElementById('m-btn-summary');
+    const mBtnAudio = document.getElementById('m-btn-audio');
+    const mBtnFlashcards = document.getElementById('m-btn-flashcards');
+    const mBtnFlashcardsSettings = document.getElementById('m-btn-flashcards-settings');
+    const mBtnTest = document.getElementById('m-btn-test');
+    const mBtnChat = document.getElementById('m-btn-chat');
+    const mBtnToGenerate = document.getElementById('m-btn-to-generate');
+    const mBtnGoSources = document.getElementById('m-btn-go-sources');
+
+    if (mBtnSummary) mBtnSummary.addEventListener('click', handleSummary);
+    if (mBtnAudio) mBtnAudio.addEventListener('click', handleAudioSummary);
+    if (mBtnFlashcards) mBtnFlashcards.addEventListener('click', handleFlashcards);
+    if (mBtnFlashcardsSettings) mBtnFlashcardsSettings.addEventListener('click', openSettings);
+    if (mBtnTest) mBtnTest.addEventListener('click', handleTest);
+    if (mBtnChat) mBtnChat.addEventListener('click', initializeChat);
+    if (mBtnToGenerate) mBtnToGenerate.addEventListener('click', () => switchMobileTab('generate'));
+    if (mBtnGoSources) mBtnGoSources.addEventListener('click', () => switchMobileTab('sources'));
+
     // Close modal on outside click
     window.addEventListener('click', (e) => {
         if (e.target === ui.elements.modal) closeSettings();
@@ -254,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refreshExamsList() {
     const exams = await storage.listExams(currentUser.id);
+    updateActiveExamIndicator(currentExam);
     ui.updateExamsList(exams,
         async (action, examId) => {
             if (action === 'delete') {
@@ -275,6 +309,8 @@ async function refreshExamsList() {
 async function selectExam(exam) {
     currentExam = exam;
     ui.markExamSelected(exam.id);
+    updateActiveExamIndicator(exam);
+    switchMobileTab('sources');
     loadHistory();
     
     loadedPDFs = [];
@@ -329,6 +365,42 @@ async function saveNewExam() {
     showAppContainer();
 }
 
+
+function switchMobileTab(tab) {
+    const container = document.getElementById('app-container');
+    if (!container) return;
+    
+    container.classList.remove('mobile-tab-history', 'mobile-tab-sources', 'mobile-tab-generate', 'mobile-tab-test');
+    container.classList.add(`mobile-tab-${tab}`);
+    
+    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    });
+
+    const tabLabels = {
+        'history': '📚 Historial',
+        'sources': '📄 Fuentes',
+        'generate': '✨ Generar',
+        'test': '🎯 Probar'
+    };
+    const indicator = document.getElementById('active-tab-indicator');
+    if (indicator) {
+        indicator.textContent = tabLabels[tab] || '📄 Fuentes';
+    }
+}
+
+function updateActiveExamIndicator(exam) {
+    const iconEl = document.getElementById('active-exam-icon');
+    const titleEl = document.getElementById('active-exam-title');
+    if (exam) {
+        if (iconEl) iconEl.textContent = exam.emoji || '📘';
+        if (titleEl) titleEl.textContent = exam.title || 'Libreta sin nombre';
+    } else {
+        if (iconEl) iconEl.textContent = '📁';
+        if (titleEl) titleEl.textContent = 'Sin libreta seleccionada';
+    }
+}
+
 function showApp(user) {
     // After login, show the notebook dashboard (prototype) instead of opening app directly
     document.getElementById('landing-page').classList.add('hidden');
@@ -377,6 +449,8 @@ function showAppContainer() {
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('notebook-dashboard').classList.add('hidden');
     document.getElementById('app-container').classList.remove('hidden');
+    switchMobileTab('sources');
+    updateActiveExamIndicator(currentExam);
 }
 
 async function renderNotebooksDashboard() {
@@ -451,8 +525,9 @@ function closeSettings() {
 
 function saveSettings() {
     flashcardCount = ui.elements.flashcardCountInput.value;
+    const mCountLabel = document.getElementById('m-flashcards-count-label');
+    if (mCountLabel) mCountLabel.textContent = `${flashcardCount} tarjetas`;
     closeSettings();
-    // Optional: show a toast or feedback
 }
 
 // --- Feature Logic ---
@@ -462,6 +537,7 @@ async function handleSummary() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
+    switchMobileTab('test');
     ui.toggleLoading(true);
     try {
         const summary = await api.generateSummary(text);
@@ -485,6 +561,7 @@ async function handleAudioSummary() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
+    switchMobileTab('test');
     ui.toggleLoading(true);
     try {
         const audioSummary = await api.generateAudioSummary(text);
@@ -508,6 +585,7 @@ async function handleFlashcards() {
     if (!text) return alert('Por favor ingresa un texto.');
     if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
 
+    switchMobileTab('test');
     ui.toggleLoading(true);
     try {
         const cards = await api.generateFlashcards(text, flashcardCount);
@@ -545,6 +623,7 @@ function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
     if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
 
+    switchMobileTab('test');
     currentContext = text;
     chatHistory = []; // Reset history on new chat start
     ui.renderChatInterface(handleChatMessage);
@@ -582,6 +661,7 @@ async function loadHistory() {
             await loadHistory();
         },
         (session) => {
+            switchMobileTab('test');
             ui.elements.inputArea.value = session.originalText;
             if (session.type === 'summary') {
                 ui.renderSummary(session.content);
