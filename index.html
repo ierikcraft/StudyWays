@@ -181,7 +181,11 @@
 
                 </a>
 
-                <span id="dash-user-name">Usuario</span>
+                <div class="user-pill-btn" id="dash-user-btn" role="button" tabindex="0" title="Opciones de cuenta">
+                    <span class="avatar mini" id="dash-user-avatar">👤</span>
+                    <span id="dash-user-name">Usuario</span>
+                    <span class="user-caret">▾</span>
+                </div>
 
                 <button id="dash-btn-logout" class="btn-text" title="Cerrar Sesión">↪️</button>
 
@@ -295,9 +299,11 @@
 
                     </a>
 
-                    <span id="user-name" class="header-user-name">Usuario</span>
-
-                    <div class="avatar" id="user-avatar">👤</div>
+                    <div class="user-pill-btn" id="app-user-btn" role="button" tabindex="0" title="Opciones de cuenta">
+                        <span id="user-name" class="header-user-name">Usuario</span>
+                        <div class="avatar" id="user-avatar">👤</div>
+                        <span class="user-caret">▾</span>
+                    </div>
 
                     <button id="btn-delete-all" class="btn-text header-delete-btn" title="Eliminar todas las libretas">🗑️</button>
 
@@ -671,7 +677,105 @@
 
 
 
-    <script type="module" src="js/app.js?v=15"></script>
+    <!-- User Menu Dropdown -->
+    <div id="user-menu-dropdown" class="user-menu-dropdown hidden" role="menu">
+        <div class="user-menu-header">
+            <div class="user-menu-avatar" id="menu-user-avatar">👤</div>
+            <div class="user-menu-info">
+                <strong class="user-menu-name" id="menu-user-name">Usuario</strong>
+                <span class="user-menu-cloud-tag">☁️ ErikCloud Sync</span>
+            </div>
+        </div>
+        <div class="user-menu-divider"></div>
+        <button id="menu-btn-storage" class="user-menu-item" type="button" role="menuitem">
+            <span class="user-menu-item-icon">☁️</span>
+            <div class="user-menu-item-content">
+                <span class="user-menu-item-title">Almacenamiento</span>
+                <span class="user-menu-item-sub" id="menu-storage-preview">Cargando libretas...</span>
+            </div>
+            <span class="user-menu-item-arrow">›</span>
+        </button>
+        <button id="menu-btn-logout" class="user-menu-item text-danger" type="button" role="menuitem">
+            <span class="user-menu-item-icon">↪️</span>
+            <div class="user-menu-item-content">
+                <span class="user-menu-item-title">Cerrar sesión</span>
+            </div>
+        </button>
+    </div>
+
+    <!-- Storage Modal (ErikCloud) -->
+    <div id="storage-modal" class="modal hidden">
+        <div class="modal-content fade-in storage-modal-card">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.4rem;">☁️</span>
+                    <h3>Almacenamiento</h3>
+                </div>
+                <button id="close-storage-modal" class="close-btn" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- ErikCloud Cloud Banner -->
+                <div class="erikcloud-banner">
+                    <div class="erikcloud-banner-icon">☁️</div>
+                    <div class="erikcloud-banner-text">
+                        <h4>Guardado en ErikCloud</h4>
+                        <p>500 exámenes gratis en la nube</p>
+                    </div>
+                    <span class="erikcloud-status-badge">● Sincronizado</span>
+                </div>
+
+                <!-- Horizontal Progress Meter -->
+                <div class="storage-meter-block">
+                    <div class="storage-meter-top">
+                        <span class="storage-meter-label">Espacio ocupado</span>
+                        <strong class="storage-meter-metric" id="storage-meter-metric">0 / 500 exámenes (0%)</strong>
+                    </div>
+                    <div class="storage-meter-track">
+                        <div id="storage-meter-fill" class="storage-meter-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="storage-meter-foot">
+                        <span>0 exámenes</span>
+                        <span id="storage-meter-percent-label">0% ocupado</span>
+                        <span>500 exámenes</span>
+                    </div>
+                </div>
+
+                <!-- Stats summary grid -->
+                <div class="storage-stats-grid">
+                    <div class="storage-stat-pill">
+                        <span class="stat-num" id="storage-stat-used">0</span>
+                        <span class="stat-lbl">En uso</span>
+                    </div>
+                    <div class="storage-stat-pill">
+                        <span class="stat-num" id="storage-stat-free">500</span>
+                        <span class="stat-lbl">Disponibles</span>
+                    </div>
+                    <div class="storage-stat-pill">
+                        <span class="stat-num">500</span>
+                        <span class="stat-lbl">Total gratis</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Warning if > 40 -->
+                <div id="storage-warning-card" class="storage-warning-card hidden">
+                    <span class="warn-icon">⚠️</span>
+                    <div class="warn-content">
+                        <strong>Recomendación de espacio</strong>
+                        <p>Has superado las 40 libretas. Se recomienda borrar algunas libretas para mantener StudyWays ágil y rápido.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button id="btn-storage-close" class="btn primary" type="button" style="width: 100%; justify-content: center; padding: 0.65rem 1rem;">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="module" src="js/app.js?v=16"></script>
 
 </body>
 

@@ -222,6 +222,46 @@ function initApp() {
         });
     }
 
+    // User Account Menu & Storage
+    const dashUserBtn = document.getElementById('dash-user-btn');
+    if (dashUserBtn) {
+        dashUserBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleUserMenu(dashUserBtn);
+        });
+    }
+
+    const appUserBtn = document.getElementById('app-user-btn');
+    if (appUserBtn) {
+        appUserBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleUserMenu(appUserBtn);
+        });
+    }
+
+    const menuBtnStorage = document.getElementById('menu-btn-storage');
+    if (menuBtnStorage) {
+        menuBtnStorage.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openStorageModal();
+        });
+    }
+
+    const menuBtnLogout = document.getElementById('menu-btn-logout');
+    if (menuBtnLogout) {
+        menuBtnLogout.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeUserMenu();
+            auth.logout();
+        });
+    }
+
+    const closeStorageBtn = document.getElementById('close-storage-modal');
+    if (closeStorageBtn) closeStorageBtn.addEventListener('click', closeStorageModal);
+
+    const btnStorageClose = document.getElementById('btn-storage-close');
+    if (btnStorageClose) btnStorageClose.addEventListener('click', closeStorageModal);
+
     // Settings Modal
     ui.elements.actionSettings.addEventListener('click', openSettings);
     ui.elements.closeModal.addEventListener('click', closeSettings);
@@ -356,11 +396,30 @@ function initApp() {
     if (btnChatGen) btnChatGen.addEventListener('click', initializeChat);
     if (btnTestGen) btnTestGen.addEventListener('click', handleTest);
 
-    // Close modal on outside click
+    // Close modal & menus on outside click
     window.addEventListener('click', (e) => {
         if (e.target === ui.elements.modal) closeSettings();
         if (e.target === ui.elements.createExamModal) closeCreateExamModal();
         if (e.target === ui.elements.testCountModal) ui.elements.testCountModal.classList.add('hidden');
+        if (e.target === document.getElementById('storage-modal')) closeStorageModal();
+
+        // Close user dropdown if click was outside
+        const menu = document.getElementById('user-menu-dropdown');
+        if (menu && !menu.classList.contains('hidden')) {
+            const isClickInside = menu.contains(e.target) ||
+                (dashUserBtn && dashUserBtn.contains(e.target)) ||
+                (appUserBtn && appUserBtn.contains(e.target));
+            if (!isClickInside) {
+                closeUserMenu();
+            }
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeUserMenu();
+            closeStorageModal();
+        }
     });
 
     // showApp already handles showing the notebook dashboard if the user is logged in.
@@ -501,8 +560,10 @@ function showApp(user) {
 
     document.getElementById('user-name').textContent = user.name;
     document.getElementById('dash-user-name').textContent = user.name;
-    // Optional: Set avatar if available or initials
-    document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
+    const initial = user.name.charAt(0).toUpperCase();
+    document.getElementById('user-avatar').textContent = initial;
+    const dashAvatar = document.getElementById('dash-user-avatar');
+    if (dashAvatar) dashAvatar.textContent = initial;
 
     // render dashboard
     renderNotebooksDashboard();
@@ -536,7 +597,11 @@ function showNotebookDashboard() {
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('notebook-dashboard').classList.remove('hidden');
     document.getElementById('app-container').classList.add('hidden');
-    if (currentUser) document.getElementById('dash-user-name').textContent = currentUser.name;
+    if (currentUser) {
+        document.getElementById('dash-user-name').textContent = currentUser.name;
+        const dashAvatar = document.getElementById('dash-user-avatar');
+        if (dashAvatar) dashAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
     renderNotebooksDashboard();
 }
 
@@ -576,6 +641,11 @@ async function renderNotebooksDashboard() {
             const newCard = document.getElementById('btn-create-notebook');
             grid.insertBefore(card, newCard);
         });
+
+        // Aviso toast si se superan los 40 examenes/libretas al entrar al menu principal
+        if (exams && exams.length > 40) {
+            showStorageWarningToast(exams.length);
+        }
     } catch (err) {
         console.error('Error rendering notebooks dashboard', err);
     }
@@ -1094,4 +1164,175 @@ async function handleExpertAdvice(text, qs, answers, container, btn) {
         btn.disabled = false;
         btn.innerHTML = '💡 Consejo del Experto';
     }
+}
+
+/* ==========================================================================
+   User Account Menu, ErikCloud Storage & Warning Toast
+   ========================================================================== */
+function toggleUserMenu(triggerEl) {
+    const menu = document.getElementById('user-menu-dropdown');
+    if (!menu) return;
+
+    if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        return;
+    }
+
+    if (currentUser) {
+        const menuName = document.getElementById('menu-user-name');
+        const menuAvatar = document.getElementById('menu-user-avatar');
+        if (menuName) menuName.textContent = currentUser.name || 'Usuario';
+        if (menuAvatar) menuAvatar.textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
+    }
+
+    updateStorageInfo();
+
+    const rect = triggerEl.getBoundingClientRect();
+    const menuWidth = 260;
+    menu.style.top = (rect.bottom + 8) + 'px';
+
+    const rightSpace = window.innerWidth - rect.right;
+    if (rightSpace >= 10 && rect.right - menuWidth >= 10) {
+        menu.style.right = rightSpace + 'px';
+        menu.style.left = 'auto';
+    } else {
+        const left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left));
+        menu.style.left = left + 'px';
+        menu.style.right = 'auto';
+    }
+
+    menu.classList.remove('hidden');
+}
+
+function closeUserMenu() {
+    const menu = document.getElementById('user-menu-dropdown');
+    if (menu) menu.classList.add('hidden');
+}
+
+async function openStorageModal() {
+    closeUserMenu();
+    await updateStorageInfo();
+    const modal = document.getElementById('storage-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeStorageModal() {
+    const modal = document.getElementById('storage-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function updateStorageInfo() {
+    if (!currentUser) return;
+    try {
+        const exams = await storage.listExams(currentUser.id);
+        const count = exams ? exams.length : 0;
+        const max = 500;
+        const percent = Math.min(100, Math.round((count / max) * 100));
+
+        // Subtitulo en el menu desplegable
+        const menuPreview = document.getElementById('menu-storage-preview');
+        if (menuPreview) {
+            menuPreview.textContent = count + ' / ' + max + ' exámenes usados';
+        }
+
+        // Metricas en la modal
+        const meterMetric = document.getElementById('storage-meter-metric');
+        if (meterMetric) {
+            meterMetric.textContent = count + ' / ' + max + ' exámenes (' + percent + '%)';
+        }
+
+        const percentLabel = document.getElementById('storage-meter-percent-label');
+        if (percentLabel) {
+            percentLabel.textContent = percent + '% ocupado';
+        }
+
+        const meterFill = document.getElementById('storage-meter-fill');
+        if (meterFill) {
+            const fillWidth = count > 0 ? Math.max(3, percent) : 0;
+            meterFill.style.width = fillWidth + '%';
+            if (count > 40) {
+                meterFill.classList.add('warning-gradient');
+            } else {
+                meterFill.classList.remove('warning-gradient');
+            }
+        }
+
+        const statUsed = document.getElementById('storage-stat-used');
+        if (statUsed) statUsed.textContent = count;
+
+        const statFree = document.getElementById('storage-stat-free');
+        if (statFree) statFree.textContent = Math.max(0, max - count);
+
+        const warningCard = document.getElementById('storage-warning-card');
+        if (warningCard) {
+            if (count > 40) {
+                warningCard.classList.remove('hidden');
+            } else {
+                warningCard.classList.add('hidden');
+            }
+        }
+    } catch (err) {
+        console.error('Error updating storage metrics:', err);
+    }
+}
+
+let activeToastTimeout = null;
+
+function showStorageWarningToast(count) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    // Eliminar toast previo si ya estuviese visible
+    const existing = document.getElementById('storage-warning-toast');
+    if (existing) {
+        if (activeToastTimeout) clearTimeout(activeToastTimeout);
+        existing.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-card warning-toast';
+    toast.id = 'storage-warning-toast';
+    toast.innerHTML = `
+        <div class="toast-header-row">
+            <span class="toast-badge">⚠️ Aviso de espacio</span>
+            <button class="toast-close-btn" type="button" title="Cerrar">×</button>
+        </div>
+        <div class="toast-body">
+            <div class="toast-icon-wrap">⚠️</div>
+            <div class="toast-text-wrap">
+                <h4 class="toast-title">Se recomienda borrar algunas libretas</h4>
+                <p class="toast-desc">Tienes <strong>${count} libretas</strong> guardadas en ErikCloud (superas las 40 recomendadas). Se recomienda eliminar las que ya no uses para mantener tu espacio de estudio rápido y organizado.</p>
+            </div>
+        </div>
+        <div class="toast-footer">
+            <button class="toast-action-btn" type="button">Ver almacenamiento</button>
+        </div>
+        <div class="toast-timer-bar">
+            <div class="toast-timer-fill"></div>
+        </div>
+    `;
+
+    toast.querySelector('.toast-close-btn').addEventListener('click', () => {
+        dismissToast(toast);
+    });
+
+    toast.querySelector('.toast-action-btn').addEventListener('click', () => {
+        dismissToast(toast);
+        openStorageModal();
+    });
+
+    container.appendChild(toast);
+
+    // Desaparece automaticamente tras 5 segundos
+    activeToastTimeout = setTimeout(() => {
+        dismissToast(toast);
+    }, 5000);
+}
+
+function dismissToast(toast) {
+    if (!toast || toast.classList.contains('toast-hiding')) return;
+    toast.classList.add('toast-hiding');
+    setTimeout(() => {
+        if (toast && toast.parentElement) toast.remove();
+    }, 320);
 }

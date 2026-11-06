@@ -43,7 +43,14 @@ export const elements = {
     testCountInput: document.getElementById('test-count-input'),
     testCountStartBtn: document.getElementById('start-test'),
     testCountCloseBtn: document.getElementById('close-test-count'),
-    testCountCancelBtn: document.getElementById('cancel-test')
+    testCountCancelBtn: document.getElementById('cancel-test'),
+
+    // Storage & User Menu
+    storageModal: document.getElementById('storage-modal'),
+    closeStorageModal: document.getElementById('close-storage-modal'),
+    btnStorageClose: document.getElementById('btn-storage-close'),
+    userMenuDropdown: document.getElementById('user-menu-dropdown'),
+    toastContainer: document.getElementById('toast-container')
 };
 
 export function toggleLoading(isLoading) {
