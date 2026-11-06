@@ -1,3 +1,13 @@
+function stopActiveSpeech() {
+    if ('speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {
+            console.warn('Speech cancellation error:', e);
+        }
+    }
+}
+
 export const elements = {
     inputArea: document.getElementById('input-text'),
     outputArea: document.getElementById('output-content'),
@@ -47,6 +57,7 @@ export function toggleLoading(isLoading) {
 }
 
 export function renderSummary(summary) {
+    stopActiveSpeech();
     elements.outputArea.innerHTML = `
         <div class="summary-content fade-in">
             <div class="markdown-body">${marked.parse(summary)}</div>
@@ -56,6 +67,7 @@ export function renderSummary(summary) {
 }
 
 export function renderAudioSummary(summaryText) {
+    stopActiveSpeech();
     elements.outputArea.innerHTML = `
         <div class="audio-summary-content fade-in">
             <div class="audio-controls">
@@ -93,15 +105,22 @@ function setupAudioControls(summaryText) {
                 playBtn.style.display = 'none';
                 pauseBtn.style.display = 'flex';
             } else {
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(summaryText);
                 utterance.lang = 'es-ES';
-                utterance.rate = 0.9;
+                utterance.rate = 0.95;
                 utterance.pitch = 1;
 
-                utterance.onend = () => {
+                const resetControls = () => {
                     isSpeaking = false;
                     playBtn.style.display = 'flex';
                     pauseBtn.style.display = 'none';
+                };
+
+                utterance.onend = resetControls;
+                utterance.onerror = (e) => {
+                    console.warn('SpeechSynthesis error:', e);
+                    resetControls();
                 };
 
                 window.speechSynthesis.speak(utterance);
@@ -131,6 +150,11 @@ function setupAudioControls(summaryText) {
 }
 
 export function renderFlashcards(cards, onExplain) {
+    stopActiveSpeech();
+    if (!cards || !Array.isArray(cards) || cards.length === 0) {
+        elements.outputArea.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No se pudieron generar tarjetas para este texto. Intenta con un texto más extenso.</div>';
+        return;
+    }
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'flashcards-carousel fade-in';
@@ -226,6 +250,7 @@ function escapeHtml(text) {
 }
 
 export function renderChatInterface(onSend) {
+    stopActiveSpeech();
     elements.outputArea.innerHTML = `
         <div class="chat-container fade-in">
             <div id="chat-messages" class="chat-messages">
@@ -257,6 +282,11 @@ export function renderChatInterface(onSend) {
 }
 
 export function renderTest(questions, onComplete, opts = {}) {
+    stopActiveSpeech();
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        elements.outputArea.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No se pudieron generar preguntas para este texto. Intenta con un texto más amplio.</div>';
+        return;
+    }
     elements.outputArea.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'test-container fade-in';
@@ -271,6 +301,7 @@ export function renderTest(questions, onComplete, opts = {}) {
     const qs = questions.map(q => ({ question: q.question, options: q.options.map(o => ({ text: o.text, correct: !!o.correct })) }));
     let index = 0;
     const answers = Array(qs.length).fill(null);
+    let isFinalized = false;
     // If caller provided previously selected answers (review mode), seed them here
     if (opts.userAnswers && Array.isArray(opts.userAnswers)) {
         opts.userAnswers.forEach((sel, i) => {
@@ -497,12 +528,12 @@ export function renderTest(questions, onComplete, opts = {}) {
             if (onComplete) onComplete({ score: percent, correctCount, total, questions: qs, userAnswers });
 
             // change nextBtn to allow finishing/closing
+            isFinalized = true;
             nextBtn.textContent = 'Hecho';
             nextBtn.disabled = false;
-            nextBtn.removeEventListener('click', () => { });
-            nextBtn.addEventListener('click', () => {
+            nextBtn.onclick = () => {
                 elements.outputArea.scrollTop = 0;
-            });
+            };
 
             if (opts.onExpertAdvice && !nav.querySelector('.expert-btn')) {
                 const expertBtn = document.createElement('button');
@@ -591,13 +622,14 @@ export function renderHistoryItem(session, onClick) {
     if (session.type === 'chat') typeLabel = '💬 Chat';
     if (session.type === 'test') typeLabel = '🧪 Test';
 
+    const origText = session.originalText || '';
     const previewText = session.type === 'flashcard'
         ? `${(session.content || []).length || 0} tarjetas`
         : session.type === 'test'
-            ? `${session.content && session.content.score ? session.content.score + '% — ' + (session.content.correctCount || 0) + '/' + (session.content.total || session.content.questions?.length || '?') : (session.meta && session.meta.count ? session.meta.count + ' preguntas' : session.originalText.substring(0, 30) + '...')}`
+            ? `${session.content && session.content.score !== undefined ? session.content.score + '% — ' + (session.content.correctCount || 0) + '/' + (session.content.total || session.content.questions?.length || '?') : (session.meta && session.meta.count ? session.meta.count + ' preguntas' : (origText ? origText.substring(0, 30) + '...' : 'Test interactivo'))}`
             : session.type === 'audio-summary'
                 ? (session.content ? session.content.substring(0, 50) + '...' : '')
-                : session.originalText ? session.originalText.substring(0, 30) + '...' : '';
+                : origText ? origText.substring(0, 30) + '...' : '';
 
     item.innerHTML = `
         <div class="history-info">
@@ -635,7 +667,7 @@ export function renderExamItem(exam, onSelect) {
             <strong>${exam.title}</strong>
             <div style="font-size:0.75rem; color:var(--text-muted);">Creado: ${new Date(exam.createdAt || Date.now()).toLocaleDateString()}</div>
         </div>
-        <button class="delete-exam" data-id="${exam.id}" style="margin-left:auto; opacity:0;">×</button>
+        <button class="delete-exam" data-id="${exam.id}" title="Eliminar cuaderno" style="margin-left:auto;">×</button>
     `;
 
     item.addEventListener('click', () => onSelect(exam));

@@ -1,8 +1,8 @@
-import * as api from './api.js?v=13';
-import * as storage from './storage.js?v=13';
-import * as ui from './ui.js?v=13';
-import * as auth from './auth.js?v=13';
-import * as pdfUtils from './pdf_utils.js?v=13';
+import * as api from './api.js?v=15';
+import * as storage from './storage.js?v=15';
+import * as ui from './ui.js?v=15';
+import * as auth from './auth.js?v=15';
+import * as pdfUtils from './pdf_utils.js?v=15';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -191,74 +191,36 @@ function initApp() {
     const fileInput = document.getElementById('pdf-upload');
 
     btnUpload.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async (e) => {
+    fileInput.addEventListener('change', (e) => {
         const files = Array.from(e.target.files || []);
         fileInput.value = '';
-        if (files.length === 0) return;
-
-        let done = 0;
-        uploadProgress.start(files.length);
-
-        const processFile = async (file, index) => {
-            uploadProgress.setFileInProcess(file.name, done, files.length);
-            try {
-                let base64;
-                let text;
-                if (pdfUtils.isImageFile(file)) {
-                    const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
-                    text = await api.imageToText(imageDataUrl);
-                    if (!text.trim()) throw new Error('no se detectó texto');
-                    base64 = pdfUtils.textToDataUrl(text);
-                } else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
-                    base64 = await pdfUtils.fileToBase64(file);
-                    text = await pdfUtils.extractTextFromPDF(file);
-                    if (!text.trim()) throw new Error('el PDF no contiene texto seleccionable');
-                } else {
-                    throw new Error('formato no soportado');
-                }
-
-                let id = Date.now() + Math.random();
-                if (currentExam && !currentExam.isLocal) {
-                    try {
-                        const result = await storage.savePdfToExam(currentUser.id, currentExam.id, file.name, base64);
-                        if (result) id = result.id;
-                    } catch (err) {
-                        console.error('Cloud save failed for file', file.name, err);
-                    }
-                }
-                return { ok: true, name: file.name, text, id };
-            } catch (err) {
-                console.error('Error procesando', file.name, err);
-                return { ok: false, name: file.name, error: err.message || String(err) };
-            } finally {
-                done++;
-                uploadProgress.update(done, files.length);
-            }
-        };
-
-        try {
-            const results = await runWithConcurrency(files, 3, processFile);
-
-            const successResults = results.filter(r => r.ok);
-            successResults.forEach(r => addPDFToList(r.name, r.text, r.id));
-
-            await uploadProgress.finish(files.length, successResults.length);
-
-            const failed = results.filter(r => !r.ok);
-            if (failed.length) {
-                showCustomAlert(
-                    `No se pudieron leer ${failed.length} de ${files.length} archivo(s):
-
-` +
-                    failed.map(r => `• ${r.name}: ${r.error}`).join('\n'),
-                    '⚠️'
-                );
-            }
-        } catch (err) {
-            console.error('Error in batch file upload:', err);
-            await uploadProgress.finish(files.length, 0);
-        }
+        handleFilesUpload(files);
     });
+
+    // Drag and Drop support
+    const inputSection = document.querySelector('.input-section');
+    if (inputSection) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            inputSection.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                inputSection.classList.add('drag-active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            inputSection.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                inputSection.classList.remove('drag-active');
+            });
+        });
+        inputSection.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                handleFilesUpload(Array.from(dt.files));
+            }
+        });
+    }
 
     // Settings Modal
     ui.elements.actionSettings.addEventListener('click', openSettings);
@@ -339,30 +301,45 @@ function initApp() {
     const navHistory = document.getElementById('nav-btn-history');
     const navSources = document.getElementById('nav-btn-sources');
     const navGenerate = document.getElementById('nav-btn-generate');
-    const navTest = document.getElementById('nav-btn-test');
 
     if (navHistory) navHistory.addEventListener('click', () => switchMobileTab('history'));
     if (navSources) navSources.addEventListener('click', () => switchMobileTab('sources'));
     if (navGenerate) navGenerate.addEventListener('click', () => switchMobileTab('generate'));
-    if (navTest) navTest.addEventListener('click', () => switchMobileTab('test'));
 
-    // Mobile Generator Tools
-    const mBtnSummary = document.getElementById('m-btn-summary');
-    const mBtnAudio = document.getElementById('m-btn-audio');
-    const mBtnFlashcards = document.getElementById('m-btn-flashcards');
-    const mBtnFlashcardsSettings = document.getElementById('m-btn-flashcards-settings');
-    const mBtnTest = document.getElementById('m-btn-test');
-    const mBtnChat = document.getElementById('m-btn-chat');
-    const mBtnToGenerate = document.getElementById('m-btn-to-generate');
-    const mBtnGoSources = document.getElementById('m-btn-go-sources');
+    // Modal Enter key shortcuts
+    if (ui.elements.examTitleInput) {
+        ui.elements.examTitleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveNewExam();
+            }
+        });
+    }
+    if (ui.elements.examEmojiInput) {
+        ui.elements.examEmojiInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ui.elements.examTitleInput.focus();
+            }
+        });
+    }
+    if (ui.elements.testCountInput) {
+        ui.elements.testCountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (ui.elements.testCountStartBtn) ui.elements.testCountStartBtn.click();
+            }
+        });
+    }
 
-    if (mBtnSummary) mBtnSummary.addEventListener('click', handleSummary);
-    if (mBtnAudio) mBtnAudio.addEventListener('click', handleAudioSummary);
-    if (mBtnFlashcards) mBtnFlashcards.addEventListener('click', handleFlashcards);
-    if (mBtnFlashcardsSettings) mBtnFlashcardsSettings.addEventListener('click', openSettings);
-    if (mBtnTest) mBtnTest.addEventListener('click', handleTest);
-    if (mBtnChat) mBtnChat.addEventListener('click', initializeChat);
-    if (mBtnToGenerate) mBtnToGenerate.addEventListener('click', () => switchMobileTab('generate'));
+    // Global Escape key shortcut
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSettings();
+            closeCreateExamModal();
+            if (ui.elements.testCountModal) ui.elements.testCountModal.classList.add('hidden');
+        }
+    });
 
     // Generar toolbar buttons
     const btnSummaryGen = document.getElementById('btn-summary-gen');
@@ -378,7 +355,6 @@ function initApp() {
     if (btnFlashcardsSettingsGen) btnFlashcardsSettingsGen.addEventListener('click', openSettings);
     if (btnChatGen) btnChatGen.addEventListener('click', initializeChat);
     if (btnTestGen) btnTestGen.addEventListener('click', handleTest);
-    if (mBtnGoSources) mBtnGoSources.addEventListener('click', () => switchMobileTab('sources'));
 
     // Close modal on outside click
     window.addEventListener('click', (e) => {
@@ -420,7 +396,9 @@ async function refreshExamsList() {
 
 async function selectExam(exam) {
     currentExam = exam;
-    ui.markExamSelected(exam.id);
+    if (exam && exam.id) {
+        ui.markExamSelected(exam.id);
+    }
     updateActiveExamIndicator(exam);
     switchMobileTab('sources');
     loadHistory();
@@ -466,7 +444,7 @@ function closeCreateExamModal() {
 }
 
 async function saveNewExam() {
-    if (!currentUser) return alert('Debes iniciar sesión para crear un examen.');
+    if (!currentUser) return showCustomAlert('Debes iniciar sesión para crear un examen.', '🔒');
     const emoji = ui.elements.examEmojiInput.value.trim() || '📘';
     const title = ui.elements.examTitleInput.value.trim() || 'Nuevo examen';
     const exam = await storage.createExam(currentUser.id, { emoji, title });
@@ -551,7 +529,10 @@ function showLanding() {
 }
 
 function showNotebookDashboard() {
-    // show dashboard (used from Back button)
+    // Stop active audio synthesis when returning to dashboard
+    if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('notebook-dashboard').classList.remove('hidden');
     document.getElementById('app-container').classList.add('hidden');
@@ -648,8 +629,8 @@ function saveSettings() {
 
 async function handleSummary() {
     const text = ui.elements.inputArea.value.trim();
-    if (!text) return alert('Por favor ingresa un texto.');
-    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+    if (!text) return showCustomAlert('Por favor ingresa apuntes o un texto para comenzar.', '📝');
+    if (!currentExam) return showCustomAlert('Selecciona o crea un cuaderno antes de guardar.', '📘');
 
     switchMobileTab('generate');
     ui.toggleLoading(true);
@@ -664,7 +645,7 @@ async function handleSummary() {
         });
         await loadHistory();
     } catch (error) {
-        alert('Error al generar resumen: ' + error.message);
+        showCustomAlert('Error al generar resumen: ' + error.message, '⚠️');
     } finally {
         ui.toggleLoading(false);
     }
@@ -672,8 +653,8 @@ async function handleSummary() {
 
 async function handleAudioSummary() {
     const text = ui.elements.inputArea.value.trim();
-    if (!text) return alert('Por favor ingresa un texto.');
-    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+    if (!text) return showCustomAlert('Por favor ingresa apuntes o un texto para comenzar.', '📝');
+    if (!currentExam) return showCustomAlert('Selecciona o crea un cuaderno antes de guardar.', '📘');
 
     switchMobileTab('generate');
     ui.toggleLoading(true);
@@ -688,7 +669,7 @@ async function handleAudioSummary() {
         });
         await loadHistory();
     } catch (error) {
-        alert('Error al generar resumen de audio: ' + error.message);
+        showCustomAlert('Error al generar resumen de audio: ' + error.message, '⚠️');
     } finally {
         ui.toggleLoading(false);
     }
@@ -696,8 +677,8 @@ async function handleAudioSummary() {
 
 async function handleFlashcards() {
     const text = ui.elements.inputArea.value.trim();
-    if (!text) return alert('Por favor ingresa un texto.');
-    if (!currentExam) return alert('Selecciona o crea un examen antes de guardar.');
+    if (!text) return showCustomAlert('Por favor ingresa apuntes o un texto para comenzar.', '📝');
+    if (!currentExam) return showCustomAlert('Selecciona o crea un cuaderno antes de guardar.', '📘');
 
     switchMobileTab('generate');
     ui.toggleLoading(true);
@@ -713,7 +694,7 @@ async function handleFlashcards() {
         });
         await loadHistory();
     } catch (error) {
-        alert('Error al generar flashcards: ' + error.message);
+        showCustomAlert('Error al generar flashcards: ' + error.message, '⚠️');
     } finally {
         ui.toggleLoading(false);
     }
@@ -735,7 +716,7 @@ function explainFlashcard(text, card) {
 
 function initializeChat() {
     const text = ui.elements.inputArea.value.trim();
-    if (!text) return alert('Por favor ingresa un texto para chatear sobre él.');
+    if (!text) return showCustomAlert('Por favor ingresa o carga un texto para chatear sobre él.', '💬');
 
     switchMobileTab('generate');
     currentContext = text;
@@ -822,6 +803,71 @@ async function runWithConcurrency(items, limit, worker) {
     });
     await Promise.all(runners);
     return results;
+}
+
+async function handleFilesUpload(files) {
+    if (!files || files.length === 0) return;
+
+    let done = 0;
+    uploadProgress.start(files.length);
+
+    const processFile = async (file, index) => {
+        uploadProgress.setFileInProcess(file.name, done, files.length);
+        try {
+            let base64;
+            let text;
+            if (pdfUtils.isImageFile(file)) {
+                const imageDataUrl = await pdfUtils.imageFileToDataUrl(file);
+                text = await api.imageToText(imageDataUrl);
+                if (!text || !text.trim()) throw new Error('no se detectó texto');
+                base64 = pdfUtils.textToDataUrl(text);
+            } else if (pdfUtils.isPdfFile(file)) {
+                base64 = await pdfUtils.fileToBase64(file);
+                text = await pdfUtils.extractTextFromPDF(file);
+                if (!text || !text.trim()) throw new Error('el PDF no contiene texto seleccionable');
+            } else {
+                throw new Error('formato no soportado (sube PDF o imágenes)');
+            }
+
+            let id = Date.now() + Math.random();
+            if (currentExam && !currentExam.isLocal) {
+                try {
+                    const result = await storage.savePdfToExam(currentUser.id, currentExam.id, file.name, base64);
+                    if (result) id = result.id;
+                } catch (err) {
+                    console.error('Cloud save failed for file', file.name, err);
+                }
+            }
+            return { ok: true, name: file.name, text, id };
+        } catch (err) {
+            console.error('Error procesando', file.name, err);
+            return { ok: false, name: file.name, error: err.message || String(err) };
+        } finally {
+            done++;
+            uploadProgress.update(done, files.length);
+        }
+    };
+
+    try {
+        const results = await runWithConcurrency(files, 3, processFile);
+
+        const successResults = results.filter(r => r.ok);
+        successResults.forEach(r => addPDFToList(r.name, r.text, r.id));
+
+        await uploadProgress.finish(files.length, successResults.length);
+
+        const failed = results.filter(r => !r.ok);
+        if (failed.length) {
+            showCustomAlert(
+                `No se pudieron leer ${failed.length} de ${files.length} archivo(s):\n\n` +
+                failed.map(r => `• ${r.name}: ${r.error}`).join('\n'),
+                '⚠️'
+            );
+        }
+    } catch (err) {
+        console.error('Error in batch file upload:', err);
+        await uploadProgress.finish(files.length, 0);
+    }
 }
 
 function addPDFToList(filename, textContent, providedId) {
@@ -966,11 +1012,25 @@ function showCustomAlert(message, customIcon = '🛡️') {
     btn.style.width = '100%';
     btn.style.marginTop = '1rem';
     
-    btn.addEventListener('click', () => {
+    const closeAlert = () => {
         overlay.style.opacity = '0';
         box.style.transform = 'translateY(-20px)';
+        document.removeEventListener('keydown', keyHandler);
         setTimeout(() => overlay.remove(), 300);
+    };
+
+    const keyHandler = (e) => {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+            e.preventDefault();
+            closeAlert();
+        }
+    };
+
+    btn.addEventListener('click', closeAlert);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeAlert();
     });
+    document.addEventListener('keydown', keyHandler);
 
     box.appendChild(icon);
     box.appendChild(text);
@@ -978,10 +1038,11 @@ function showCustomAlert(message, customIcon = '🛡️') {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    // Trigger animation next frame
+    // Trigger animation next frame and focus button
     requestAnimationFrame(() => {
         overlay.style.opacity = '1';
         box.style.transform = 'translateY(0)';
+        btn.focus();
     });
 }
 

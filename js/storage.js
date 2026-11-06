@@ -1,13 +1,23 @@
 import { db } from './firebase.js';
 import { ref, set, get, push, remove, child, update } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 
+function safeJsonParse(str, fallback) {
+    if (!str) return fallback;
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        console.warn('Error parsing JSON from storage:', e);
+        return fallback;
+    }
+}
+
 function ensureArg(arg, name) { if (!arg) throw new Error(`${name} is required`); }
 function examsKey(uid) { return `studyways_exams_${uid}`; }
 function sessionsKey(uid, examId) { return `studyways_sessions_${uid}_${examId}`; }
 
 function readLocalExams(uid) {
     const raw = localStorage.getItem(examsKey(uid));
-    return raw ? JSON.parse(raw) : [];
+    return safeJsonParse(raw, []);
 }
 function writeLocalExams(uid, arr) { localStorage.setItem(examsKey(uid), JSON.stringify(arr)); }
 
@@ -105,7 +115,7 @@ export async function saveSession(uid, examId, data) {
     if (isLocal) {
         const key = sessionsKey(uid, examId);
         const raw = localStorage.getItem(key);
-        const obj = raw ? JSON.parse(raw) : {};
+        const obj = safeJsonParse(raw, {});
         obj[session.id] = session;
         localStorage.setItem(key, JSON.stringify(obj));
     } else {
@@ -127,7 +137,7 @@ export async function loadSessions(uid, examId) {
     if (isLocal) {
         const raw = localStorage.getItem(sessionsKey(uid, examId));
         if (raw) {
-            const obj = JSON.parse(raw);
+            const obj = safeJsonParse(raw, {});
             localSessions = Object.entries(obj).map(([id, s]) => ({ id, ...s, isLocal: true }));
         }
     }
@@ -161,7 +171,7 @@ export async function deleteSession(uid, examId, sessionId) {
         const key = sessionsKey(uid, examId);
         const raw = localStorage.getItem(key);
         if (raw) {
-            const obj = JSON.parse(raw);
+            const obj = safeJsonParse(raw, {});
             delete obj[sessionId];
             localStorage.setItem(key, JSON.stringify(obj));
         }

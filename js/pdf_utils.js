@@ -19,6 +19,7 @@ export async function extractTextFromPDF(file) {
                 reject(error);
             }
         };
+        reader.onerror = (err) => reject(err);
         reader.readAsArrayBuffer(file);
     });
 }
@@ -45,7 +46,17 @@ export function fileToBase64(file) {
 // --- Imágenes ---
 
 export function isImageFile(file) {
-    return file && file.type && file.type.startsWith('image/');
+    if (!file) return false;
+    if (file.type && file.type.startsWith('image/')) return true;
+    const name = (file.name || '').toLowerCase();
+    return /\.(jpe?g|png|webp|gif|bmp|heic|heif|svg|avif)$/i.test(name);
+}
+
+export function isPdfFile(file) {
+    if (!file) return false;
+    if (file.type === 'application/pdf') return true;
+    const name = (file.name || '').toLowerCase();
+    return /\.pdf$/i.test(name);
 }
 
 /**
@@ -78,7 +89,12 @@ export function imageFileToDataUrl(file, maxSize = 1600, quality = 0.85) {
         };
         img.onerror = () => {
             URL.revokeObjectURL(url);
-            reject(new Error('No se pudo leer la imagen'));
+            const isHeic = /\.(heic|heif)$/i.test(file.name || '');
+            if (isHeic) {
+                reject(new Error('Formato HEIC no decodificable directamente. Prueba convertir a JPG/PNG o cambiar a "El más compatible" en la cámara de iOS.'));
+            } else {
+                reject(new Error('No se pudo leer la imagen'));
+            }
         };
         img.src = url;
     });

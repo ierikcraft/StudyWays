@@ -181,45 +181,48 @@ export async function chatWithContext(context, question, history = []) {
 // --- TUS FUNCIONES DE PARSEO (Las que leen P: y R: / F: y V:) ---
 
 function parseTest(text) {
+    if (!text) return [];
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const questions = [];
-    let i = 0;
-    while (i < lines.length) {
-        const line = lines[i];
-        if (line.startsWith('P:')) {
-            const q = { question: line.substring(2).trim(), options: [] };
-            for (let j = 1; j <= 3 && (i + j) < lines.length; j++) {
-                const optLine = lines[i + j];
-                if (optLine.startsWith('F:')) {
-                    q.options.push({ text: optLine.substring(2).trim(), correct: false });
-                } else if (optLine.startsWith('V:')) {
-                    q.options.push({ text: optLine.substring(2).trim(), correct: true });
-                }
+    let currentQ = null;
+
+    for (const line of lines) {
+        // Strip markdown bold markers if the model emits **P:**, **V:**, **F:**
+        const clean = line.replace(/^\*{1,2}(P|F|V):\*{1,2}/i, '$1:');
+        if (/^P:/i.test(clean)) {
+            if (currentQ && currentQ.options.length >= 2) {
+                questions.push(currentQ);
             }
-            questions.push(q);
-            i += 4;
-        } else {
-            i++;
+            currentQ = { question: clean.replace(/^P:\s*/i, '').trim(), options: [] };
+        } else if (/^F:/i.test(clean) && currentQ) {
+            currentQ.options.push({ text: clean.replace(/^F:\s*/i, '').trim(), correct: false });
+        } else if (/^V:/i.test(clean) && currentQ) {
+            currentQ.options.push({ text: clean.replace(/^V:\s*/i, '').trim(), correct: true });
         }
+    }
+
+    if (currentQ && currentQ.options.length >= 2) {
+        questions.push(currentQ);
     }
     return questions;
 }
 
 function parseFlashcards(text) {
-    const lines = text.split('\n');
+    if (!text) return [];
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const cards = [];
     let currentCard = {};
 
     lines.forEach(line => {
-        const cleanLine = line.trim();
-        if (cleanLine.startsWith('P:')) {
+        const clean = line.replace(/^\*{1,2}(P|R):\*{1,2}/i, '$1:');
+        if (/^P:/i.test(clean)) {
             if (currentCard.question && currentCard.answer) {
                 cards.push(currentCard);
                 currentCard = {};
             }
-            currentCard.question = cleanLine.substring(2).trim();
-        } else if (cleanLine.startsWith('R:')) {
-            currentCard.answer = cleanLine.substring(2).trim();
+            currentCard.question = clean.replace(/^P:\s*/i, '').trim();
+        } else if (/^R:/i.test(clean)) {
+            currentCard.answer = clean.replace(/^R:\s*/i, '').trim();
         }
     });
 
