@@ -1,8 +1,8 @@
-import * as api from './api.js?v=15';
-import * as storage from './storage.js?v=15';
-import * as ui from './ui.js?v=15';
-import * as auth from './auth.js?v=15';
-import * as pdfUtils from './pdf_utils.js?v=15';
+import * as api from './api.js?v=17';
+import * as storage from './storage.js?v=17';
+import * as ui from './ui.js?v=17';
+import * as auth from './auth.js?v=17';
+import * as pdfUtils from './pdf_utils.js?v=17';
 
 let flashcardCount = 5;
 let chatHistory = [];
@@ -247,6 +247,38 @@ function initApp() {
         });
     }
 
+    const menuBtnForcedTest = document.getElementById('menu-btn-forced-test');
+    if (menuBtnForcedTest) {
+        menuBtnForcedTest.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeUserMenu();
+            openForcedTestPicker();
+        });
+    }
+
+    const closeFtPicker = document.getElementById('close-ft-picker');
+    if (closeFtPicker) closeFtPicker.addEventListener('click', closeForcedTestPicker);
+
+    const closeFtBriefing = document.getElementById('close-ft-briefing');
+    if (closeFtBriefing) closeFtBriefing.addEventListener('click', closeForcedTestBriefing);
+
+    const cancelFtBriefing = document.getElementById('ft-cancel-briefing');
+    if (cancelFtBriefing) cancelFtBriefing.addEventListener('click', closeForcedTestBriefing);
+
+    const startCountdownBtn = document.getElementById('ft-start-countdown-btn');
+    if (startCountdownBtn) startCountdownBtn.addEventListener('click', startForcedTestCountdown);
+
+    const ftUnlockBtn = document.getElementById('ft-btn-unlock');
+    if (ftUnlockBtn) ftUnlockBtn.addEventListener('click', finishAndUnlockForcedTest);
+
+    // Target selector buttons in briefing
+    const ftOpt10 = document.getElementById('ft-opt-10');
+    const ftOpt12 = document.getElementById('ft-opt-12');
+    if (ftOpt10 && ftOpt12) {
+        ftOpt10.addEventListener('click', () => selectForcedTestTarget(10));
+        ftOpt12.addEventListener('click', () => selectForcedTestTarget(12));
+    }
+
     const menuBtnLogout = document.getElementById('menu-btn-logout');
     if (menuBtnLogout) {
         menuBtnLogout.addEventListener('click', (e) => {
@@ -419,6 +451,44 @@ function initApp() {
         if (e.key === 'Escape') {
             closeUserMenu();
             closeStorageModal();
+            closeForcedTestPicker();
+            closeForcedTestBriefing();
+        }
+
+        // Keyboard navigation for Forced Test (1, 2, 3, 4 or Enter)
+        if (activeForcedTest && activeForcedTest.status === 'in_progress') {
+            const feedbackBox = document.getElementById('ft-feedback-box');
+            const isFeedbackVisible = feedbackBox && !feedbackBox.classList.contains('hidden');
+
+            if (isFeedbackVisible && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                const nextBtn = document.getElementById('ft-next-btn');
+                if (nextBtn) nextBtn.click();
+                return;
+            }
+
+            if (!isFeedbackVisible && ['1', '2', '3', '4'].includes(e.key)) {
+                const optIndex = parseInt(e.key, 10) - 1;
+                const optionsContainer = document.getElementById('ft-options-list');
+                if (optionsContainer && optionsContainer.children[optIndex]) {
+                    const btn = optionsContainer.children[optIndex];
+                    if (!btn.disabled) btn.click();
+                }
+            }
+        }
+    });
+
+    
+    window.addEventListener('beforeunload', (e) => {
+        if (activeForcedTest && activeForcedTest.status === 'in_progress') {
+            activeForcedTest.isLiveSession = false;
+            activeForcedTest.lastUpdatedAt = Date.now();
+            try {
+                localStorage.setItem(`studyways_forced_test_${currentUser.id}`, JSON.stringify(activeForcedTest));
+            } catch (err) {}
+            e.preventDefault();
+            e.returnValue = '¡Estás en el Test Obligado! Si sales serás penalizado con más preguntas.';
+            return e.returnValue;
         }
     });
 
@@ -552,7 +622,7 @@ function updateActiveExamIndicator(exam) {
     }
 }
 
-function showApp(user) {
+async function showApp(user) {
     // After login, show the notebook dashboard (prototype) instead of opening app directly
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('notebook-dashboard').classList.remove('hidden');
@@ -564,6 +634,10 @@ function showApp(user) {
     document.getElementById('user-avatar').textContent = initial;
     const dashAvatar = document.getElementById('dash-user-avatar');
     if (dashAvatar) dashAvatar.textContent = initial;
+
+    // Check if active forced test lockdown exists
+    const hasLockdown = await checkForcedTestLockdown();
+    if (hasLockdown) return;
 
     // render dashboard
     renderNotebooksDashboard();
@@ -590,6 +664,11 @@ function showLanding() {
 }
 
 function showNotebookDashboard() {
+    if (activeForcedTest && activeForcedTest.status === 'in_progress') {
+        const overlay = document.getElementById('forced-test-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+        return;
+    }
     // Stop active audio synthesis when returning to dashboard
     if ('speechSynthesis' in window) {
         try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -606,6 +685,11 @@ function showNotebookDashboard() {
 }
 
 function showAppContainer() {
+    if (activeForcedTest && activeForcedTest.status === 'in_progress') {
+        const overlay = document.getElementById('forced-test-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+        return;
+    }
     document.getElementById('landing-page').classList.add('hidden');
     document.getElementById('notebook-dashboard').classList.add('hidden');
     document.getElementById('app-container').classList.remove('hidden');
@@ -1335,4 +1419,538 @@ function dismissToast(toast) {
     setTimeout(() => {
         if (toast && toast.parentElement) toast.remove();
     }, 320);
+}
+
+/* ==========================================================================
+   MODO TEST OBLIGADO — HARD STUDYING
+   ========================================================================== */
+let activeForcedTest = null;
+let selectedForcedTestExam = null;
+let selectedForcedTestTarget = 10;
+let currentQuestionStep = null;
+
+// --- Web Audio Synthesizer (Zero External Dependencies) ---
+function playBeep(freq = 440, type = 'sine', duration = 0.15) {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+    } catch (e) {}
+}
+
+function playDing() {
+    playBeep(523.25, 'triangle', 0.12);
+    setTimeout(() => playBeep(659.25, 'triangle', 0.18), 110);
+}
+
+function playBuzz() {
+    playBeep(220, 'sawtooth', 0.28);
+}
+
+function playTriumph() {
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        setTimeout(() => playBeep(freq, 'triangle', 0.28), i * 110);
+    });
+}
+
+// --- Step 1: Picker Modal ---
+async function openForcedTestPicker() {
+    if (!currentUser) return showCustomAlert('Debes iniciar sesión para usar el modo Hard Studying.', '🔒');
+
+    const modal = document.getElementById('forced-test-picker-modal');
+    const list = document.getElementById('ft-exams-list');
+    if (!modal || !list) return;
+
+    list.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">Cargando libretas...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+        const exams = await storage.listExams(currentUser.id);
+        list.innerHTML = '';
+
+        if (!exams || exams.length === 0) {
+            list.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No tienes libretas creadas. Crea una primero para ponerte a prueba.</div>';
+            return;
+        }
+
+        for (const exam of exams) {
+            // Check if exam has PDFs or content
+            let pdfCount = 0;
+            try {
+                const pdfs = await storage.loadPdfsForExam(currentUser.id, exam.id);
+                pdfCount = pdfs ? pdfs.length : 0;
+            } catch (e) {}
+
+            const item = document.createElement('div');
+            item.className = 'ft-exam-pick-item' + (pdfCount === 0 ? ' disabled' : '');
+            item.innerHTML = `
+                <div class="ft-exam-pick-emoji">${exam.emoji || '📘'}</div>
+                <div class="ft-exam-pick-info">
+                    <strong class="ft-exam-pick-title">${exam.title}</strong>
+                    <span class="ft-exam-pick-status">${pdfCount > 0 ? `📄 ${pdfCount} archivo(s) detectado(s)` : '⚠️ Sin documentos subidos'}</span>
+                </div>
+                <span class="ft-exam-pick-arrow">›</span>
+            `;
+
+            item.addEventListener('click', () => {
+                if (pdfCount === 0) {
+                    showCustomAlert('Esta libreta no tiene documentos PDF o fotos subidas. Sube apuntes a esta libreta primero para poder evaluarte con ella.', '⚠️');
+                    return;
+                }
+                openForcedTestBriefing(exam, pdfCount);
+            });
+
+            list.appendChild(item);
+        }
+    } catch (err) {
+        console.error('Error listing exams for forced test:', err);
+        list.innerHTML = '<div style="padding: 1rem; color: #ef4444;">Error al cargar las libretas.</div>';
+    }
+}
+
+function closeForcedTestPicker() {
+    const modal = document.getElementById('forced-test-picker-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// --- Step 2: Briefing Modal ---
+function openForcedTestBriefing(exam, pdfCount) {
+    closeForcedTestPicker();
+    selectedForcedTestExam = exam;
+    selectedForcedTestTarget = 10;
+
+    const modal = document.getElementById('forced-test-briefing-modal');
+    if (!modal) return;
+
+    document.getElementById('ft-briefing-emoji').textContent = exam.emoji || '📘';
+    document.getElementById('ft-briefing-title').textContent = exam.title;
+    document.getElementById('ft-briefing-source-info').textContent = `📄 ${pdfCount} archivo(s) listo(s) para generar el test`;
+
+    selectForcedTestTarget(10);
+    modal.classList.remove('hidden');
+}
+
+function closeForcedTestBriefing() {
+    const modal = document.getElementById('forced-test-briefing-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function selectForcedTestTarget(target) {
+    selectedForcedTestTarget = target;
+    const opt10 = document.getElementById('ft-opt-10');
+    const opt12 = document.getElementById('ft-opt-12');
+    if (opt10 && opt12) {
+        opt10.classList.toggle('active', target === 10);
+        opt12.classList.toggle('active', target === 12);
+    }
+}
+
+// --- Step 3: Countdown (3... 2... 1... ¡A ESTUDIAR!) ---
+function startForcedTestCountdown() {
+    closeForcedTestBriefing();
+    const overlay = document.getElementById('forced-test-countdown-overlay');
+    const numEl = document.getElementById('countdown-number');
+    if (!overlay || !numEl) return;
+
+    overlay.classList.remove('hidden');
+
+    let count = 3;
+    numEl.textContent = '3';
+    numEl.classList.remove('go-text');
+    playBeep(440, 'sine', 0.2);
+
+    const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+            numEl.textContent = String(count);
+            numEl.classList.remove('go-text');
+            numEl.style.animation = 'none';
+            void numEl.offsetWidth; // re-trigger animation
+            numEl.style.animation = 'count-pop 1s cubic-bezier(0.16, 1, 0.3, 1)';
+            playBeep(440, 'sine', 0.2);
+        } else if (count === 0) {
+            numEl.textContent = '¡A ESTUDIAR!';
+            numEl.classList.add('go-text');
+            numEl.style.animation = 'none';
+            void numEl.offsetWidth;
+            numEl.style.animation = 'count-pop 1s cubic-bezier(0.16, 1, 0.3, 1)';
+            playBeep(659.25, 'triangle', 0.3);
+            setTimeout(() => playBeep(880, 'triangle', 0.4), 90);
+        } else {
+            clearInterval(timer);
+            overlay.classList.add('hidden');
+            initiateForcedTest(selectedForcedTestExam, selectedForcedTestTarget);
+        }
+    }, 950);
+}
+
+// --- Step 4: Full Content Extractor ---
+async function getExamFullContent(uid, examId) {
+    let combinedText = '';
+    try {
+        const pdfs = await storage.loadPdfsForExam(uid, examId);
+        if (pdfs && pdfs.length > 0) {
+            for (let p of pdfs) {
+                let text = '';
+                if (typeof p.value === 'string' && p.value.startsWith('data:text/plain')) {
+                    text = pdfUtils.dataUrlToText(p.value);
+                } else if (p.value) {
+                    const blob = pdfUtils.base64ToBlob(p.value, 'application/pdf');
+                    const file = new File([blob], p.name || 'doc.pdf', { type: 'application/pdf' });
+                    text = await pdfUtils.extractTextFromPDF(file);
+                }
+                if (text) {
+                    combinedText += `\n\n=== ${p.name || 'Archivo'} ===\n${text}`;
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching PDFs for exam text:', e);
+    }
+
+    try {
+        const sessions = await storage.loadSessions(uid, examId);
+        if (sessions && sessions.length > 0) {
+            sessions.forEach(s => {
+                if (s.originalText && !combinedText.includes(s.originalText.slice(0, 50))) {
+                    combinedText += `\n\n${s.originalText}`;
+                }
+            });
+        }
+    } catch (e) {}
+
+    return combinedText.trim();
+}
+
+// --- Step 5: Initiate Forced Test & Cloud Save ---
+async function initiateForcedTest(exam, target) {
+    const overlay = document.getElementById('forced-test-overlay');
+    const loadingCard = document.getElementById('ft-loading-card');
+    const questionCard = document.getElementById('ft-question-card');
+    const victoryCard = document.getElementById('ft-victory-card');
+    if (!overlay) return;
+
+    overlay.classList.remove('hidden');
+    if (loadingCard) loadingCard.classList.remove('hidden');
+    if (questionCard) questionCard.classList.add('hidden');
+    if (victoryCard) victoryCard.classList.add('hidden');
+
+    document.getElementById('ft-exam-tag').textContent = `${exam.emoji || '📘'} ${exam.title}`;
+
+    try {
+        const examText = await getExamFullContent(currentUser.id, exam.id);
+        const sourceText = examText && examText.length > 50 ? examText : `Libreta: ${exam.title}. Contenido temático de estudio.`;
+
+        // Request questions from AI (minimum 10)
+        const questionsCount = Math.max(10, target + 2);
+        let questions = await api.generateTest(sourceText, questionsCount);
+
+        if (!questions || questions.length === 0) {
+            throw new Error('No se pudieron obtener preguntas del contenido.');
+        }
+
+        // Shuffle options in each question
+        questions.forEach(q => shuffleArray(q.options));
+        shuffleArray(questions);
+
+        activeForcedTest = {
+            examId: exam.id,
+            examTitle: exam.title,
+            examEmoji: exam.emoji || '📘',
+            targetCorrect: target,
+            currentCorrect: 0,
+            totalAnswered: 0,
+            streak: 0,
+            maxStreak: 0,
+            penaltiesCount: 0,
+            status: 'in_progress',
+            isLiveSession: true,
+            startedAt: Date.now(),
+            lastUpdatedAt: Date.now(),
+            examTextSample: sourceText.slice(0, 4000),
+            questionsPool: questions,
+            currentQuestionIndex: 0,
+            failedQuestions: []
+        };
+
+        // Save immediately to Cloud (Firebase) & LocalStorage
+        await storage.saveForcedTest(currentUser.id, activeForcedTest);
+
+        renderForcedTestQuestion();
+    } catch (err) {
+        console.error('Error starting forced test:', err);
+        showCustomAlert('Hubo un error al generar las preguntas del examen: ' + err.message, '⚠️');
+        overlay.classList.add('hidden');
+    }
+}
+
+// --- Step 6: Render Current Question & Options ---
+function renderForcedTestQuestion() {
+    if (!activeForcedTest) return;
+
+    const overlay = document.getElementById('forced-test-overlay');
+    const loadingCard = document.getElementById('ft-loading-card');
+    const questionCard = document.getElementById('ft-question-card');
+    const victoryCard = document.getElementById('ft-victory-card');
+
+    if (overlay) overlay.classList.remove('hidden');
+    if (loadingCard) loadingCard.classList.add('hidden');
+    if (victoryCard) victoryCard.classList.add('hidden');
+    if (questionCard) questionCard.classList.remove('hidden');
+
+    // Header updates
+    document.getElementById('ft-exam-tag').textContent = `${activeForcedTest.examEmoji || '📘'} ${activeForcedTest.examTitle}`;
+
+    // Penalty indicators
+    const penaltyPill = document.getElementById('ft-penalty-pill');
+    const penaltyBanner = document.getElementById('ft-penalty-banner');
+    if (activeForcedTest.penaltiesCount > 0) {
+        if (penaltyPill) {
+            penaltyPill.classList.remove('hidden');
+            document.getElementById('ft-penalty-text').textContent = `+${activeForcedTest.penaltiesCount * 2} preguntas por abandono`;
+        }
+        if (penaltyBanner) {
+            penaltyBanner.classList.remove('hidden');
+            document.getElementById('ft-penalty-banner-desc').innerHTML = `Saliste o recargaste durante el Test Obligado. Se han añadido <strong>+${activeForcedTest.penaltiesCount * 2} preguntas</strong> a tu meta. ¡Termina el test para desbloquear la app!`;
+        }
+    } else {
+        if (penaltyPill) penaltyPill.classList.add('hidden');
+        if (penaltyBanner) penaltyBanner.classList.add('hidden');
+    }
+
+    // Progress updates
+    const ratioText = `${activeForcedTest.currentCorrect} / ${activeForcedTest.targetCorrect}`;
+    document.getElementById('ft-progress-ratio').textContent = ratioText;
+    document.getElementById('ft-streak-count').textContent = activeForcedTest.streak || 0;
+
+    const percent = Math.min(100, Math.round((activeForcedTest.currentCorrect / activeForcedTest.targetCorrect) * 100));
+    document.getElementById('ft-bar-fill').style.width = `${percent}%`;
+
+    // Check if goal reached
+    if (activeForcedTest.currentCorrect >= activeForcedTest.targetCorrect) {
+        showForcedTestVictory();
+        return;
+    }
+
+    // Get next question
+    let pool = activeForcedTest.questionsPool || [];
+    let idx = activeForcedTest.currentQuestionIndex || 0;
+
+    if (idx >= pool.length) {
+        // Recycle failed questions if available
+        if (activeForcedTest.failedQuestions && activeForcedTest.failedQuestions.length > 0) {
+            pool = [...activeForcedTest.failedQuestions];
+            shuffleArray(pool);
+            activeForcedTest.questionsPool = pool;
+            activeForcedTest.failedQuestions = [];
+            activeForcedTest.currentQuestionIndex = 0;
+            idx = 0;
+        } else {
+            // Need more questions: fetch batch in background
+            generateMoreQuestionsForTest();
+            return;
+        }
+    }
+
+    const currentQ = pool[idx];
+    if (!currentQ) return;
+    currentQuestionStep = currentQ;
+
+    document.getElementById('ft-q-num').textContent = `Pregunta ${(activeForcedTest.totalAnswered || 0) + 1}`;
+    document.getElementById('ft-q-text').textContent = currentQ.question;
+
+    // Feedback box hide
+    const feedbackBox = document.getElementById('ft-feedback-box');
+    if (feedbackBox) {
+        feedbackBox.classList.add('hidden');
+        feedbackBox.classList.remove('is-correct', 'is-incorrect');
+    }
+
+    // Render options
+    const optionsContainer = document.getElementById('ft-options-list');
+    optionsContainer.innerHTML = '';
+
+    const letters = ['A', 'B', 'C', 'D'];
+    currentQ.options.forEach((opt, oIndex) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ft-opt-btn';
+        btn.innerHTML = `
+            <span class="ft-opt-letter">${letters[oIndex] || String(oIndex + 1)}</span>
+            <span class="ft-opt-text">${opt.text}</span>
+        `;
+
+        btn.addEventListener('click', () => handleForcedTestAnswer(opt, btn, optionsContainer));
+        optionsContainer.appendChild(btn);
+    });
+}
+
+// --- Step 7: Evaluate Answer ---
+async function handleForcedTestAnswer(chosenOpt, chosenBtn, container) {
+    if (!activeForcedTest || !currentQuestionStep) return;
+
+    // Disable all options immediately
+    Array.from(container.children).forEach(btn => btn.disabled = true);
+
+    const isCorrect = !!chosenOpt.correct;
+    activeForcedTest.totalAnswered = (activeForcedTest.totalAnswered || 0) + 1;
+
+    // Highlight options
+    if (isCorrect) {
+        chosenBtn.classList.add('correct');
+        activeForcedTest.currentCorrect = (activeForcedTest.currentCorrect || 0) + 1;
+        activeForcedTest.streak = (activeForcedTest.streak || 0) + 1;
+        activeForcedTest.maxStreak = Math.max(activeForcedTest.maxStreak || 0, activeForcedTest.streak);
+        playDing();
+    } else {
+        chosenBtn.classList.add('incorrect');
+        activeForcedTest.streak = 0;
+        // Find correct button to highlight green
+        Array.from(container.children).forEach((btn, bi) => {
+            if (currentQuestionStep.options[bi] && currentQuestionStep.options[bi].correct) {
+                btn.classList.add('correct');
+            }
+        });
+        // Push to failed questions so it repeats!
+        if (!activeForcedTest.failedQuestions) activeForcedTest.failedQuestions = [];
+        activeForcedTest.failedQuestions.push(currentQuestionStep);
+        playBuzz();
+    }
+
+    // Show feedback banner
+    const feedbackBox = document.getElementById('ft-feedback-box');
+    const feedbackIcon = document.getElementById('ft-feedback-icon');
+    const feedbackTitle = document.getElementById('ft-feedback-title');
+    const feedbackMsg = document.getElementById('ft-feedback-msg');
+    const nextBtn = document.getElementById('ft-next-btn');
+
+    if (feedbackBox) {
+        feedbackBox.classList.remove('hidden', 'is-correct', 'is-incorrect');
+        feedbackBox.classList.add(isCorrect ? 'is-correct' : 'is-incorrect');
+
+        if (isCorrect) {
+            if (feedbackIcon) feedbackIcon.textContent = '✅';
+            if (feedbackTitle) feedbackTitle.textContent = '¡Correcto!';
+            if (feedbackMsg) feedbackMsg.textContent = `Excelente trabajo. Sumas +1 a tu meta (${activeForcedTest.currentCorrect}/${activeForcedTest.targetCorrect}).`;
+        } else {
+            const correctOpt = currentQuestionStep.options.find(o => o.correct);
+            if (feedbackIcon) feedbackIcon.textContent = '❌';
+            if (feedbackTitle) feedbackTitle.textContent = 'Respuesta incorrecta';
+            if (feedbackMsg) feedbackMsg.textContent = `La opción correcta era: "${correctOpt ? correctOpt.text : ''}". Esta pregunta volverá a salir hasta que la aciertes.`;
+        }
+
+        if (nextBtn) {
+            nextBtn.onclick = () => {
+                activeForcedTest.currentQuestionIndex = (activeForcedTest.currentQuestionIndex || 0) + 1;
+                renderForcedTestQuestion();
+            };
+        }
+    }
+
+    // Sync progress to cloud & local storage
+    activeForcedTest.lastUpdatedAt = Date.now();
+    await storage.saveForcedTest(currentUser.id, activeForcedTest);
+}
+
+// --- Step 8: Generate More Questions if Exhausted ---
+async function generateMoreQuestionsForTest() {
+    const loadingCard = document.getElementById('ft-loading-card');
+    const questionCard = document.getElementById('ft-question-card');
+
+    if (loadingCard) loadingCard.classList.remove('hidden');
+    if (questionCard) questionCard.classList.add('hidden');
+
+    try {
+        const text = activeForcedTest.examTextSample || 'Apuntes y conceptos clave de la libreta.';
+        const moreQs = await api.generateTest(text, 6);
+        if (moreQs && moreQs.length > 0) {
+            moreQs.forEach(q => shuffleArray(q.options));
+            shuffleArray(moreQs);
+            activeForcedTest.questionsPool = moreQs;
+            activeForcedTest.currentQuestionIndex = 0;
+            await storage.saveForcedTest(currentUser.id, activeForcedTest);
+            renderForcedTestQuestion();
+            return;
+        }
+    } catch (e) {
+        console.error('Error fetching more questions in forced test:', e);
+    }
+
+    // If API failed or text exhausted, repeat from existing pool
+    if (activeForcedTest.questionsPool && activeForcedTest.questionsPool.length > 0) {
+        shuffleArray(activeForcedTest.questionsPool);
+        activeForcedTest.currentQuestionIndex = 0;
+        renderForcedTestQuestion();
+    }
+}
+
+// --- Step 9: Victory Screen & Cloud Unlock ---
+async function showForcedTestVictory() {
+    activeForcedTest.status = 'completed';
+    playTriumph();
+
+    const loadingCard = document.getElementById('ft-loading-card');
+    const questionCard = document.getElementById('ft-question-card');
+    const victoryCard = document.getElementById('ft-victory-card');
+
+    if (loadingCard) loadingCard.classList.add('hidden');
+    if (questionCard) questionCard.classList.add('hidden');
+    if (victoryCard) victoryCard.classList.remove('hidden');
+
+    document.getElementById('ft-stat-target').textContent = activeForcedTest.targetCorrect;
+    document.getElementById('ft-stat-total').textContent = activeForcedTest.totalAnswered || activeForcedTest.targetCorrect;
+    document.getElementById('ft-stat-streak').textContent = activeForcedTest.maxStreak || activeForcedTest.currentCorrect;
+
+    // Clear cloud lockdown so normal navigation is restored
+    await storage.clearForcedTest(currentUser.id);
+}
+
+function finishAndUnlockForcedTest() {
+    activeForcedTest = null;
+    const overlay = document.getElementById('forced-test-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    showCustomAlert('🎉 ¡Enhorabuena! Has completado el Test Obligado en modo Hard Studying.', '🏆');
+    showNotebookDashboard();
+}
+
+// --- Step 10: App Startup Lockdown Check ---
+async function checkForcedTestLockdown() {
+    if (!currentUser) return false;
+
+    try {
+        const testState = await storage.loadForcedTest(currentUser.id);
+        if (testState && testState.status === 'in_progress') {
+            // Check if abandonment / reload occurred
+            // If isLiveSession is false or last update is older than 4 seconds: penalize with +2 questions!
+            const timeDiff = Date.now() - (testState.lastUpdatedAt || 0);
+            if (testState.isLiveSession === false || timeDiff > 4000) {
+                testState.penaltiesCount = (testState.penaltiesCount || 0) + 1;
+                testState.targetCorrect = (testState.targetCorrect || 10) + 2;
+                testState.streak = 0;
+            }
+
+            testState.isLiveSession = true;
+            testState.lastUpdatedAt = Date.now();
+            activeForcedTest = testState;
+            await storage.saveForcedTest(currentUser.id, testState);
+
+            // Render lockdown immediately
+            renderForcedTestQuestion();
+            return true;
+        }
+    } catch (e) {
+        console.error('Error checking forced test lockdown on startup:', e);
+    }
+    return false;
 }

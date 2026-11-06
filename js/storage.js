@@ -254,3 +254,54 @@ export async function removePdfFromExam(uid, examId, pdfId) {
     await remove(ref(db, `users/${uid}/exam_pdfs/${examId}/${pdfId}`));
     await remove(ref(db, `users/${uid}/exams/${examId}/pdfs/${pdfId}`));
 }
+
+
+// --- Forced Test (Hard Studying) Cloud Persistence ---
+function forcedTestKey(uid) { return `studyways_forced_test_${uid}`; }
+
+export async function saveForcedTest(uid, testState) {
+    ensureArg(uid, 'uid');
+    const enriched = { ...testState, lastUpdatedAt: Date.now() };
+    try {
+        localStorage.setItem(forcedTestKey(uid), JSON.stringify(enriched));
+    } catch (e) {
+        console.warn('LocalStorage error saving forced test:', e);
+    }
+
+    try {
+        await set(ref(db, `users/${uid}/active_forced_test`), enriched);
+    } catch (err) {
+        console.error('Error saving forced test to Firebase:', err);
+    }
+}
+
+export async function loadForcedTest(uid) {
+    ensureArg(uid, 'uid');
+    let cloudState = null;
+    try {
+        const snapshot = await get(ref(db, `users/${uid}/active_forced_test`));
+        if (snapshot.exists()) {
+            cloudState = snapshot.val();
+        }
+    } catch (err) {
+        console.error('Error loading forced test from Firebase:', err);
+    }
+
+    const localRaw = localStorage.getItem(forcedTestKey(uid));
+    const localState = safeJsonParse(localRaw, null);
+
+    if (cloudState && localState) {
+        return (cloudState.lastUpdatedAt || 0) >= (localState.lastUpdatedAt || 0) ? cloudState : localState;
+    }
+    return cloudState || localState;
+}
+
+export async function clearForcedTest(uid) {
+    ensureArg(uid, 'uid');
+    localStorage.removeItem(forcedTestKey(uid));
+    try {
+        await remove(ref(db, `users/${uid}/active_forced_test`));
+    } catch (err) {
+        console.error('Error removing forced test from Firebase:', err);
+    }
+}

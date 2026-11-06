@@ -695,6 +695,17 @@
             </div>
             <span class="user-menu-item-arrow">›</span>
         </button>
+        <button id="menu-btn-forced-test" class="user-menu-item user-menu-hardcore" type="button" role="menuitem">
+            <span class="user-menu-item-icon">⚡</span>
+            <div class="user-menu-item-content">
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span class="user-menu-item-title">Test Obligado</span>
+                    <span class="badge-hardcore">HARD STUDYING</span>
+                </div>
+                <span class="user-menu-item-sub">Bloqueo en la nube hasta aprobar</span>
+            </div>
+            <span class="user-menu-item-arrow">›</span>
+        </button>
         <button id="menu-btn-logout" class="user-menu-item text-danger" type="button" role="menuitem">
             <span class="user-menu-item-icon">↪️</span>
             <div class="user-menu-item-content">
@@ -775,7 +786,202 @@
     <!-- Toast Notification Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <script type="module" src="js/app.js?v=16"></script>
+    
+    <!-- Forced Test Exam Picker Modal -->
+    <div id="forced-test-picker-modal" class="modal hidden">
+        <div class="modal-content fade-in ft-modal-content">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.4rem;">⚡</span>
+                    <h3>Elegir libreta para Test Obligado</h3>
+                </div>
+                <button id="close-ft-picker" class="close-btn" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Selecciona el examen o libreta que deseas poner a prueba. Se generará un test con el contenido de sus PDFs y apuntes.
+                </p>
+                <div id="ft-exams-list" class="ft-exams-picker-list">
+                    <!-- Exam items injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forced Test Briefing Modal -->
+    <div id="forced-test-briefing-modal" class="modal hidden">
+        <div class="modal-content fade-in ft-briefing-modal-content">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.5rem;">⚔️</span>
+                    <div>
+                        <h3 style="margin-bottom: 0.1rem;">Modo Hard Studying</h3>
+                        <span class="ft-briefing-alert-tag">Aviso Importante</span>
+                    </div>
+                </div>
+                <button id="close-ft-briefing" class="close-btn" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="ft-selected-exam-card">
+                    <span class="ft-exam-card-emoji" id="ft-briefing-emoji">📘</span>
+                    <div class="ft-exam-card-info">
+                        <strong id="ft-briefing-title">Cargando libreta...</strong>
+                        <span id="ft-briefing-source-info">Contenido detectado</span>
+                    </div>
+                </div>
+
+                <div class="ft-warning-rules-box">
+                    <h4>⚠️ ¿Cómo funciona el Test Obligado?</h4>
+                    <ul>
+                        <li>
+                            <strong>☁️ Bloqueo Total en ErikCloud:</strong> El inicio del test se guarda en la nube. Toda la aplicación quedará bloqueada en este examen en este y cualquier otro dispositivo donde inicies sesión.
+                        </li>
+                        <li>
+                            <strong>🔄 Repetición sin fin hasta aprobar:</strong> Debes acertar todas las preguntas requeridas. Si fallas una pregunta, volverá a salir hasta que la respondas bien.
+                        </li>
+                        <li>
+                            <strong>🚨 Penalización Anti-Escape:</strong> Si recargas la página, cierras la pestaña o te sales, el sistema te penalizará sumando <strong>+2 preguntas adicionales</strong> a tu meta por cada intento.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="ft-target-selector">
+                    <label style="font-weight: 700; font-size: 0.88rem; display: block; margin-bottom: 0.5rem;">
+                        Elige tu objetivo de aciertos:
+                    </label>
+                    <div class="ft-target-options">
+                        <button type="button" class="ft-target-btn active" data-target="10" id="ft-opt-10">
+                            <strong>10 Preguntas</strong>
+                            <span>Hard Studying estándar</span>
+                        </button>
+                        <button type="button" class="ft-target-btn" data-target="12" id="ft-opt-12">
+                            <strong>12 Preguntas</strong>
+                            <span>Desafío Extremo 🔥</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button id="ft-cancel-briefing" class="btn secondary" type="button" style="flex: 1;">Cancelar</button>
+                    <button id="ft-start-countdown-btn" class="btn primary ft-cta-btn" type="button" style="flex: 2;">
+                        🔥 Iniciar Desafío
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3-2-1 Countdown Overlay -->
+    <div id="forced-test-countdown-overlay" class="forced-test-countdown-overlay hidden">
+        <div class="countdown-circle">
+            <span id="countdown-number" class="countdown-number">3</span>
+        </div>
+        <p class="countdown-caption">¡Prepárate para Hard Studying!</p>
+    </div>
+
+    <!-- Fullscreen Forced Test Lockdown Overlay -->
+    <div id="forced-test-overlay" class="forced-test-overlay hidden" role="dialog" aria-modal="true">
+        <div class="forced-test-container">
+            <!-- Top bar -->
+            <div class="forced-test-header">
+                <div class="forced-test-brand">
+                    <span class="forced-test-badge">⚡ HARD STUDYING</span>
+                    <span class="forced-test-exam-tag" id="ft-exam-tag">📘 Libreta</span>
+                </div>
+                <div class="forced-test-status-group">
+                    <span class="ft-cloud-badge" title="Sincronizado con Firebase / ErikCloud">
+                        <span class="ft-pulse-dot"></span> ErikCloud Activo
+                    </span>
+                    <span id="ft-penalty-pill" class="ft-penalty-pill hidden">
+                        🚨 <span id="ft-penalty-text">+2 preguntas por abandono</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Warning Banner when penalized -->
+            <div id="ft-penalty-banner" class="ft-penalty-banner hidden">
+                <div class="ft-penalty-icon">🚨</div>
+                <div class="ft-penalty-info">
+                    <strong>¡Penalización por abandono detectada!</strong>
+                    <p id="ft-penalty-banner-desc">Saliste o recargaste durante el Test Obligado. Se han añadido <strong>+2 preguntas</strong> a tu meta. ¡Termina el test para desbloquear la app!</p>
+                </div>
+            </div>
+
+            <!-- Progress Meter Bar -->
+            <div class="ft-progress-card card">
+                <div class="ft-progress-meta">
+                    <div class="ft-progress-title">
+                        <span>Aciertos obligatorios requeridos:</span>
+                        <strong id="ft-progress-ratio">0 / 10</strong>
+                    </div>
+                    <div class="ft-streak-badge" id="ft-streak-badge">
+                        🔥 Racha: <strong id="ft-streak-count">0</strong>
+                    </div>
+                </div>
+                <div class="ft-bar-track">
+                    <div id="ft-bar-fill" class="ft-bar-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Active Question Card -->
+            <div id="ft-question-card" class="ft-question-card card fade-in">
+                <div class="ft-q-header">
+                    <span class="ft-q-num" id="ft-q-num">Pregunta 1</span>
+                    <span class="ft-q-hint">Selecciona la opción correcta</span>
+                </div>
+                <h3 class="ft-q-text" id="ft-q-text">Cargando pregunta...</h3>
+                <div class="ft-options-list" id="ft-options-list">
+                    <!-- Options buttons injected here -->
+                </div>
+                <div id="ft-feedback-box" class="ft-feedback-box hidden">
+                    <div class="ft-feedback-header">
+                        <span id="ft-feedback-icon"></span>
+                        <strong id="ft-feedback-title"></strong>
+                    </div>
+                    <p id="ft-feedback-msg"></p>
+                    <button id="ft-next-btn" class="btn primary ft-next-btn">Siguiente pregunta ›</button>
+                </div>
+            </div>
+
+            <!-- Loading State inside test -->
+            <div id="ft-loading-card" class="ft-loading-card card hidden">
+                <div class="ft-loading-spinner"></div>
+                <h4>Generando más preguntas desde tus apuntes...</h4>
+                <p>La IA está creando nuevos desafíos para que completes tu meta.</p>
+            </div>
+
+            <!-- Victory Card (shown on completion) -->
+            <div id="ft-victory-card" class="ft-victory-card card hidden fade-in">
+                <div class="ft-victory-emoji">🏆</div>
+                <h2>¡TEST OBLIGADO SUPERADO!</h2>
+                <p class="ft-victory-subtitle">Has demostrado tu disciplina completando todas las preguntas obligatorias.</p>
+                <div class="ft-victory-stats">
+                    <div class="ft-stat-box">
+                        <span class="ft-stat-val" id="ft-stat-target">10</span>
+                        <span class="ft-stat-lbl">Aciertos logrados</span>
+                    </div>
+                    <div class="ft-stat-box">
+                        <span class="ft-stat-val" id="ft-stat-total">12</span>
+                        <span class="ft-stat-lbl">Preguntas respondidas</span>
+                    </div>
+                    <div class="ft-stat-box">
+                        <span class="ft-stat-val" id="ft-stat-streak">5</span>
+                        <span class="ft-stat-lbl">Racha máxima</span>
+                    </div>
+                </div>
+                <button id="ft-btn-unlock" class="btn primary ft-unlock-btn">
+                    🔓 Desbloquear StudyWays y continuar
+                </button>
+            </div>
+
+            <!-- Footer locked reminder -->
+            <div class="ft-lock-footer">
+                <span>🔒 Modo de estudio estricto activado en la nube. Prohibido rendirse.</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js?v=17"></script>
 
 </body>
 
