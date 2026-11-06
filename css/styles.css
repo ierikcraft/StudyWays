@@ -191,6 +191,38 @@ textarea {
 
 .exams-container {
     margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+#exams-list {
+    max-height: 124px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.3) rgba(0, 0, 0, 0.04);
+}
+
+#exams-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+#exams-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+}
+
+#exams-list::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+}
+
+#exams-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
 }
 
 .exam-item {
@@ -204,11 +236,24 @@ textarea {
     gap: 0.5rem;
     align-items: center;
     font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.exam-item:last-child {
+    margin-bottom: 0;
 }
 
 .exam-item .exam-meta {
-    display:flex;
-    flex-direction:column;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.exam-item .exam-meta strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .exam-selected {
