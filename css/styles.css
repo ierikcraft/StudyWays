@@ -1943,3 +1943,78 @@ input[type="range"] {
 .generate-bar-container .action-buttons {
     margin-top: 0;
 }
+
+
+/* Author Badges & Footers: Hecho por Erik */
+.landing-footer {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-title, 'Outfit', sans-serif);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.landing-footer strong {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.landing-author-badge {
+    margin-top: 1.5rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: var(--font-title, 'Outfit', sans-serif);
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.14);
+    padding: 0.4rem 1.1rem;
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.landing-author-badge strong {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.dashboard-footer {
+    margin-top: auto;
+    padding: 3rem 0 1.5rem 0;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-family: var(--font-title, 'Outfit', sans-serif);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.dashboard-footer strong {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-family: var(--font-title, 'Outfit', sans-serif);
+}
+
+.sidebar-footer strong {
+    color: var(--text-main);
+    font-weight: 700;
+}
